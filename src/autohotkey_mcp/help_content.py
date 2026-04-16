@@ -4,8 +4,8 @@ Levels: quick | reference | language | usage | tools | mcp_server
 """
 
 QUICK = """# AutoHotkey v2 – Quick
-- **Script depot**: autohotkey-test repo (scriptlets/). Bridge: ScriptletCOMBridge.ahk on port 10744.
-- **This MCP**: list/run/stop scriptlets, get source/metadata, optional AI generate (sandbox). Port 10746.
+- **Script depot**: autohotkey-test repo (scriptlets/). Optional: ScriptletCOMBridge.ahk on port 10744 (autohotkey-test uses it).
+- **This MCP**: list/run/stop scriptlets, get source/metadata, **sampling-first** AI generate/refine (sandbox), preset prompts. Port 10746. Webapp **Chat** (10747) uses local HTTP only. Uses bridge when available; else scans depot and runs AHK directly (set AUTOHOTKEY_EXE if needed).
 - **v2 only**: Use `#Requires AutoHotkey v2.0+`. No v1 syntax. Hotkey() not ::, MsgBox("msg","title","Icon!"), StrUpper/StrLower, Loop/for-in.
 - **Docs**: GET http://127.0.0.1:10746/help for full web help."""
 
@@ -36,25 +36,31 @@ USAGE = """# AutoHotkey v2 – Usage (scriptlets)
 **Error handling**: OnError(LogError), log to scriptlets\\logs\\<name>.log.
 **GUI**: Use Gui(), Add(), OnEvent("Close"|"Escape", Hide). No blocking MsgBox with timeout; use TrayTip/ToolTip.
 **Hotkeys**: Prefer named functions for multi-statement or try/catch. F9 escape hatch for loops/games.
-**Bridge**: ScriptletCOMBridge.ahk serves /run/<id>.ahk, /stop/<id>.ahk, /scriptlets, /status on 127.0.0.1:10744. Dashboard: /dashboard.
+**Bridge (optional)**: ScriptletCOMBridge.ahk (autohotkey-test) serves /run, /stop, /scriptlets on 10744. If bridge is down, MCP lists from depot and runs AHK directly (AUTOHOTKEY_EXE).
 **Checklist**: #Requires v2; OnError; gui.Add not Gui, Add; Hotkey() not ::; value := Random(1,100); Loop/for-in not for i:=1 to 10; MsgBox 3 params only; DirSelect/FileRead/FileOpen; StrUpper/StrLower."""
 
 TOOLS = """# autohotkey-mcp – Tools
-- **list_scriptlets()**: List all scriptlets from bridge (id, name, description, category, running).
-- **run_scriptlet(script_id)**: Run scriptlet by id (e.g. quick_notes). Calls bridge /run/<id>.ahk.
-- **stop_scriptlet(script_id)**: Stop running scriptlet. Calls bridge /stop/<id>.ahk.
+- **list_scriptlets()**: List scriptlets (from bridge if up, else depot scan). id, name, description, category, running.
+- **run_scriptlet(script_id)**: Run by id. Uses bridge if up; else runs AHK directly (tracks PID).
+- **stop_scriptlet(script_id)**: Stop running. Uses bridge if up; else kills tracked PID.
 - **get_scriptlet_source(script_id)**: Read full .ahk source from depot (scriptlets/ or scriptlets/ai_generated/).
 - **get_scriptlet_metadata(script_id)**: Read @description, @version, etc. from file header.
-- **generate_scriptlet(prompt, filename?)**: [Dangerous] Write stub to scriptlets/ai_generated/ only. Review before moving to main depot.
+- **generate_scriptlet(prompt, filename?)**: [Dangerous] Generate AHK v2 — **FastMCP sampling first** (host LLM), then localhost HTTP if needed. Writes only validated scripts under scriptlets/ai_generated/; nothing written on failure.
+- **list_generation_prompts(category?)**: Preset prompt library (ids, titles, tags) for ideation.
+- **refine_ahk_prompt(rough, persona_id?)**: Turn a vague idea into a clear prompt (same sampling-first + HTTP fallback as generate).
+- **list_running_scriptlets()**: Rows for each running script (hotkeys, description, PID when direct; bridge when COM bridge reports running).
+- **stop_scriptlet(script_id, pid?)**: Stop a run; pass ``pid`` to stop one direct instance when multiple copies of the same script are running.
 - **ahk_help(level?, topic?)**: This help. level: quick | reference | language | usage | tools | mcp_server. topic: optional subsection."""
 
 MCP_SERVER = """# autohotkey-mcp – MCP & Fleet
 **Repo**: d:/dev/repos/autohotkey-mcp (standalone; not under RoboFang hands/).
 **Port**: 10746. Health: GET http://127.0.0.1:10746/status. Tool: POST /tool with {"name":"...","arguments":{}}.
 **Start**: uv run autohotkey-mcp or .\\start.ps1 (kills zombie on 10746).
-**Env**: AUTOHOTKEY_BRIDGE_URL (default http://127.0.0.1:10744), AUTOHOTKEY_SCRIPT_DEPOT (default d:/dev/repos/autohotkey-test), PORT.
-**Cursor**: Add MCP server with command uv, args ["--directory", "<path>/autohotkey-mcp", "run", "autohotkey-mcp"]. FastMCP 3.1 dual transport: stdio + HTTP on 10746.
-**Depot**: ScriptletCOMBridge must be running (autohotkey-test start_dashboard.bat) for list/run/stop. get_source/get_metadata read from depot path."""
+**Env**: AUTOHOTKEY_BRIDGE_URL (default http://127.0.0.1:10744), AUTOHOTKEY_SCRIPT_DEPOT (default d:/dev/repos/autohotkey-test), PORT. For generate: AUTOHOTKEY_LLM_BASE_URL (default http://127.0.0.1:11434/v1), AUTOHOTKEY_LLM_MODEL, optional AUTOHOTKEY_LLM_API_KEY / OPENAI_API_KEY.
+**Cursor**: Add MCP server with command uv, args ["--directory", "<path>/autohotkey-mcp", "run", "autohotkey-mcp"]. When stdin is a pipe (Cursor), the server runs stdio-only automatically (no HTTP, no port 10746 bind).
+**Depot**: scriptlets live in AUTOHOTKEY_SCRIPT_DEPOT/scriptlets. Bridge (autohotkey-test) optional: when up, list/run/stop use it; when down, MCP uses depot scan + direct AHK run (AUTOHOTKEY_EXE). get_source/get_metadata always read from depot.
+**MCP resources (prompt library):** ``ahk://prompts/catalog`` (JSON array), ``ahk://prompts/categories``, ``ahk://prompts/{prompt_id}`` (single preset or JSON error). Use with agents that support MCP resources.
+**Webapp Chat API:** ``POST /api/chat`` with ``"stream": true`` returns SSE (OpenAI-compatible streaming from Ollama/LM Studio)."""
 
 LEVELS: dict[str, str] = {
     "quick": QUICK,

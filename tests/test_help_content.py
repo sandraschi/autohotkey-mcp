@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from autohotkey_mcp import help_content
 
 

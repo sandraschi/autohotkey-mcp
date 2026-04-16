@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/common/utils.ts","./src/components/layout/app-layout.tsx","./src/components/layout/sidebar.tsx","./src/components/layout/topbar.tsx","./src/pages/chat.tsx","./src/pages/dashboard.tsx","./src/pages/help.tsx","./src/pages/running.tsx","./src/pages/scriptlets.tsx","./src/pages/status.tsx"],"version":"5.6.3"}

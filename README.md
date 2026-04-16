@@ -82,6 +82,10 @@ Or: `just run` / `just server`.
 
 **Tasks:** `just --list` — lint, format, install, clean, health.
 
+## Related MCP servers
+
+- **[pywinauto-mcp](https://github.com/sandraschi/pywinauto-mcp)** — **Native Windows UI** via PyWinAuto: **UI Automation** / window and **element** tools, mouse/keyboard portmanteau, screenshots/OCR, optional web dashboard. Use when the agent should **inspect controls and drive apps** through structured MCP calls. **Not** an AHK script manager; **this repo** is not a UIA tree server. **Overlap:** both are **high-trust** desktop session tools — read **SAFETY** in each repo. **Together:** install both when workflows combine **AHK scriptlets** (here) with **per-control UI automation** (pywinauto-mcp). See pywinauto-mcp README — *Complementary: autohotkey-mcp*.
+
 ## Fleet
 
 - **Ports:** Backend 10746, frontend 10747 (user-facing). Register in robofang `docs/standards/WEBAPP_PORTS.md` if using the Hub.

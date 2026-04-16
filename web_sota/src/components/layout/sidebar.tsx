@@ -4,6 +4,8 @@ import {
   LayoutDashboard,
   HelpCircle,
   FileCode,
+  MessageSquare,
+  Layers,
   Activity,
   ChevronLeft,
   ChevronRight,
@@ -17,7 +19,9 @@ interface SidebarProps {
 const navItems = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/help", label: "Help", icon: HelpCircle },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/scriptlets", label: "Scriptlets", icon: FileCode },
+  { href: "/running", label: "Running", icon: Layers },
   { href: "/status", label: "Status", icon: Activity },
 ];
 

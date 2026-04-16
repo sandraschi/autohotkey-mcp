@@ -8,20 +8,31 @@ from __future__ import annotations
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastmcp import FastMCP
 
 from autohotkey_mcp import help_content
+from autohotkey_mcp import personas as personas_mod
+from autohotkey_mcp import prompt_catalog
+from autohotkey_mcp.ahk_llm import chat_via_http, chat_via_http_stream, http_llm_available
+from autohotkey_mcp.prompt_refine import refine_generation_prompt
+from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
+from autohotkey_mcp.prompt_resources import register_prompt_resources
 from autohotkey_mcp.tools import register_scriptlet_tools
+from autohotkey_mcp.tools.scriptlets import get_running_overview
 
 PORT = int(os.getenv("PORT", "10746"))
 HOST = os.getenv("HOST", "127.0.0.1")
+_DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
+_AI_GENERATED = _DEPOT / "scriptlets" / "ai_generated"
 
 mcp = FastMCP("autohotkey-mcp")
 register_scriptlet_tools(mcp)
+register_prompt_resources(mcp)
 
 app = FastAPI(title="AutoHotkey MCP", version="0.1.0")
 
@@ -42,7 +53,9 @@ async def api_scriptlets() -> JSONResponse:
     if hasattr(result, "structured_content") and result.structured_content is not None:
         data = result.structured_content
     elif hasattr(result, "content") and result.content:
-        raw = result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+        raw = (
+            result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+        )
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
@@ -63,6 +76,214 @@ async def api_help(level: str | None = None) -> JSONResponse:
     return JSONResponse(content={"levels": help_content.get_all_levels()})
 
 
+@app.post("/api/generate_scriptlet")
+async def api_generate_scriptlet(request: Request) -> JSONResponse:
+    """SPA: same as MCP generate_scriptlet — **no MCP Context** here, so **localhost HTTP only** (Ollama/LM Studio)."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Invalid JSON body"}
+        )
+    prompt = body.get("prompt") if isinstance(body, dict) else None
+    filename = body.get("filename") if isinstance(body, dict) else None
+    if not isinstance(prompt, str):
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Missing string 'prompt'"}
+        )
+    fn = filename if isinstance(filename, str) else None
+    result = await generate_ahk_script_to_file(prompt, fn, _AI_GENERATED, None)
+    status = 200 if result.get("success") else 422
+    return JSONResponse(status_code=status, content=result)
+
+
+@app.get("/api/personas")
+async def api_personas() -> JSONResponse:
+    """SPA: chat personas (local HTTP chat)."""
+    return JSONResponse(content={"personas": personas_mod.list_personas_public()})
+
+
+@app.get("/api/prompts")
+async def api_prompts(category: str | None = None) -> JSONResponse:
+    """SPA: preset generation prompts; optional ?category= filter."""
+    items = prompt_catalog.get_prompts(category=category)
+    return JSONResponse(
+        content={
+            "prompts": [
+                {
+                    "id": p["id"],
+                    "title": p.get("title"),
+                    "category": p.get("category"),
+                    "tags": p.get("tags") or [],
+                    "prompt": p.get("prompt"),
+                }
+                for p in items
+            ],
+            "categories": prompt_catalog.categories(),
+        },
+    )
+
+
+@app.post("/api/chat", response_model=None)
+async def api_chat(request: Request) -> JSONResponse | StreamingResponse:
+    """SPA: multi-turn chat (localhost OpenAI-compatible). Set ``stream: true`` for SSE (Ollama/LM Studio)."""
+    if not http_llm_available():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "success": False,
+                "error": "Local LLM not configured. Set AUTOHOTKEY_LLM_BASE_URL and AUTOHOTKEY_LLM_MODEL, "
+                "then start Ollama or LM Studio.",
+            },
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Invalid JSON body"}
+        )
+    if not isinstance(body, dict):
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Body must be an object"}
+        )
+    raw_messages = body.get("messages")
+    if not isinstance(raw_messages, list) or not raw_messages:
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Missing messages array"}
+        )
+    persona_id = body.get("persona_id")
+    pid = persona_id if isinstance(persona_id, str) else None
+    system = personas_mod.persona_system(pid)
+    override = body.get("system")
+    if isinstance(override, str) and override.strip():
+        system = override.strip()
+    messages: list[dict[str, str]] = []
+    for m in raw_messages:
+        if not isinstance(m, dict):
+            continue
+        role = m.get("role")
+        content = m.get("content")
+        if role in ("user", "assistant") and isinstance(content, str):
+            messages.append({"role": role, "content": content})
+    if not messages:
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "No valid user/assistant messages"}
+        )
+    temp = body.get("temperature")
+    temperature = float(temp) if isinstance(temp, (int, float)) else 0.65
+    use_stream = body.get("stream") is True
+    if use_stream:
+
+        async def event_stream():
+            try:
+                async for chunk in chat_via_http_stream(
+                    messages,
+                    system=system,
+                    temperature=temperature,
+                ):
+                    yield f"data: {json.dumps({'c': chunk})}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    try:
+        reply = await chat_via_http(messages, system=system, temperature=temperature)
+    except Exception as e:
+        return JSONResponse(status_code=502, content={"success": False, "error": str(e)})
+    return JSONResponse(content={"success": True, "message": reply})
+
+
+@app.post("/api/refine_prompt")
+async def api_refine_prompt(request: Request) -> JSONResponse:
+    """SPA: refine rough idea — HTTP-only path (ctx None). MCP tool uses sampling + HTTP."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Invalid JSON body"}
+        )
+    if not isinstance(body, dict):
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Body must be an object"}
+        )
+    rough = body.get("rough")
+    if not isinstance(rough, str):
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Missing string 'rough'"}
+        )
+    persona_id = body.get("persona_id")
+    pid = persona_id if isinstance(persona_id, str) else None
+    extra = personas_mod.persona_system(pid)
+    result = await refine_generation_prompt(rough, None, persona_system_extra=extra)
+    status = 200 if result.get("success") else 422
+    return JSONResponse(status_code=status, content=result)
+
+
+@app.get("/api/running")
+async def api_running() -> JSONResponse:
+    """SPA: running scriptlets — PIDs (direct), bridge rows, hotkeys/description from depot headers."""
+    data = await get_running_overview()
+    return JSONResponse(content=data)
+
+
+@app.post("/api/stop_scriptlet")
+async def api_stop_scriptlet(request: Request) -> JSONResponse:
+    """SPA: stop one instance — pass ``pid`` for direct multi-launch; omit for bridge or all direct PIDs for id."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Invalid JSON body"}
+        )
+    if not isinstance(body, dict):
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Body must be an object"}
+        )
+    script_id = body.get("script_id")
+    if not isinstance(script_id, str) or not script_id.strip():
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Missing script_id"}
+        )
+    args: dict[str, Any] = {"script_id": script_id.strip()}
+    raw_pid = body.get("pid")
+    if raw_pid is not None:
+        try:
+            args["pid"] = int(raw_pid)
+        except (TypeError, ValueError):
+            return JSONResponse(
+                status_code=400, content={"success": False, "error": "pid must be an integer"}
+            )
+    try:
+        result = await mcp.call_tool("stop_scriptlet", args)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+    if hasattr(result, "structured_content") and result.structured_content is not None:
+        data = result.structured_content
+    elif hasattr(result, "content") and result.content:
+        raw = (
+            result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+        )
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            data = {"success": False, "error": raw}
+    else:
+        data = {"success": False, "error": str(result)}
+    ok = isinstance(data, dict) and data.get("success") is True
+    return JSONResponse(
+        status_code=200 if ok else 422, content=data if isinstance(data, dict) else {"error": data}
+    )
+
+
 @app.get("/status")
 async def status() -> dict[str, Any]:
     """Hub and proxy: GET /status."""
@@ -71,9 +292,16 @@ async def status() -> dict[str, Any]:
     except Exception:
         return {"ok": True, "service": "autohotkey-mcp", "port": PORT}
     if hasattr(result, "structured_content") and result.structured_content is not None:
-        return {"ok": True, "service": "autohotkey-mcp", "port": PORT, "scriptlets": result.structured_content}
+        return {
+            "ok": True,
+            "service": "autohotkey-mcp",
+            "port": PORT,
+            "scriptlets": result.structured_content,
+        }
     if hasattr(result, "content") and result.content:
-        raw = result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+        raw = (
+            result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+        )
         try:
             data = json.loads(raw)
             return {"ok": True, "service": "autohotkey-mcp", "port": PORT, "scriptlets": data}
@@ -88,8 +316,10 @@ def _md_to_html(md: str) -> str:
     import re
 
     out = md
+
     def sub_code(m: re.Match) -> str:
         return "<pre><code>" + html.escape(m.group(1)) + "</code></pre>"
+
     out = re.sub(r"```(?:\w*)\n(.*?)```", sub_code, out, flags=re.DOTALL)
     out = html.escape(out)
     out = re.sub(r"^### (.+)$", r"<h3>\1</h3>", out, flags=re.MULTILINE)
@@ -106,7 +336,8 @@ def _mini_help_html() -> str:
     nav = "".join(f'<a href="#{k}">{k}</a> ' for k in order if k in levels)
     sections = "".join(
         f'<section id="{k}"><h2>{k}</h2><div class="c">{_md_to_html(levels[k])}</div></section>'
-        for k in order if k in levels
+        for k in order
+        if k in levels
     )
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -131,7 +362,23 @@ async def mini_help() -> str:
 @app.get("/")
 async def root() -> dict[str, Any]:
     """Root: minimal service info. Full webapp on 10747; mini-help at /help."""
-    return {"service": "autohotkey-mcp", "port": PORT, "health": "/health", "help": "/help", "api": ["/api/help", "/api/scriptlets"]}
+    return {
+        "service": "autohotkey-mcp",
+        "port": PORT,
+        "health": "/health",
+        "help": "/help",
+        "api": [
+            "/api/help",
+            "/api/scriptlets",
+            "/api/running",
+            "/api/stop_scriptlet",
+            "/api/generate_scriptlet",
+            "/api/personas",
+            "/api/prompts",
+            "/api/chat",
+            "/api/refine_prompt",
+        ],
+    }
 
 
 @app.post("/tool")
@@ -150,7 +397,11 @@ async def tool(request: Request) -> JSONResponse:
         if hasattr(result, "structured_content") and result.structured_content is not None:
             data = result.structured_content
         elif hasattr(result, "content") and result.content:
-            raw = result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+            raw = (
+                result.content[0].text
+                if hasattr(result.content[0], "text")
+                else str(result.content[0])
+            )
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
@@ -168,6 +419,15 @@ async def tool(request: Request) -> JSONResponse:
 def main() -> None:
     import asyncio
     import uvicorn
+
+    # Cursor/IDE run with stdin as a pipe (not a TTY). Run stdio-only then to avoid port bind
+    # (10746 already in use) and dual-transport hangs. Explicit AUTOHOTKEY_MCP_HTTP=0 also forces stdio-only.
+    force_stdio = os.getenv("AUTOHOTKEY_MCP_HTTP", "").lower() in ("0", "false", "no")
+    stdio_only = force_stdio or not sys.stdin.isatty()
+
+    if stdio_only:
+        asyncio.run(mcp.run_stdio_async())
+        return
 
     async def _run_dual() -> None:
         config = uvicorn.Config(app, host=HOST, port=PORT, log_level="info")

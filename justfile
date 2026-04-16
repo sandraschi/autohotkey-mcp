@@ -4,6 +4,9 @@
 default:
     just --list
 
+stats:
+    uv run python tools/repo_stats.py
+
 # Run backend only (port 10746)
 run server:
     uv run autohotkey-mcp
@@ -36,9 +39,8 @@ install-web:
 web start:
     .\web_sota\start.ps1
 
-# Clean build artifacts and caches
+# Clean build artifacts and caches (also clears .ruff_cache; avoids uv when Scripts\*.exe is locked)
 clean:
-    uv run ruff clean
     powershell -NoProfile -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue dist, build, .ruff_cache, .pytest_cache, web_sota/node_modules, web_sota/dist; Get-ChildItem -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; Write-Host 'Cleaned.'"
 
 # Backend health check (requires server running)

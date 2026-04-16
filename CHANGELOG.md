@@ -8,11 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **generate_scriptlet:** Real AHK v2 generation — **FastMCP sampling primary**, localhost HTTP fallback; validation + one repair pass; no file on failure.
+- **list_generation_prompts** / **refine_ahk_prompt** MCP tools; preset prompt library (`prompt_catalog`).
+- **Web SPA:** **Chat** page (personas, preset prompts, refine → Scriptlets), **Running** page (`GET /api/running`, `POST /api/stop_scriptlet`) — hotkeys, description, kill; multi-instance direct PIDs tracked.
+- **MCP resources:** `ahk://prompts/catalog`, `ahk://prompts/categories`, `ahk://prompts/{prompt_id}` for agent access to the prompt library.
+- **Chat:** `POST /api/chat` with `stream: true` — SSE streaming for Ollama-compatible backends.
+- **Cursor skill:** `.cursor/skills/autohotkey-v2-authoring/SKILL.md`.
 - Fleet-standard webapp: Vite + React SPA (port 10747) with retractable sidebar and multiple pages (Overview, Help, Scriptlets, Status).
 - Backend API for SPA: `GET /api/help` (all levels or `?level=...`), `GET /api/scriptlets`.
 - `web_sota/start.ps1` starts backend (10746) and frontend (10747), opens SPA in browser.
 - Vite proxy of `/api` and `/health` to backend.
-- **justfile** at repo root: `run`, `lint`/`format`, `install`, `install-web`, `web`, `clean`, `health`.
+- **justfile** at repo root: `run`/`server`, `lint`/`check`, `format`/`fmt`, `install`, `install-web`, `web`/`start`, `clean`, `health`, `test`.
+- **glama.json** at repo root for Glama marketplace metadata (name, version, description).
 
 ### Changed
 
