@@ -22,9 +22,7 @@ from autohotkey_mcp.ahk_llm import chat_via_http, chat_via_http_stream, http_llm
 from autohotkey_mcp.prompt_refine import refine_generation_prompt
 from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
 from autohotkey_mcp.prompt_resources import register_prompt_resources
-from autohotkey_mcp.prompts import register_prompts
-from autohotkey_mcp.providers import register_providers
-from autohotkey_mcp.tools import register_scriptlet_tools, register_prefab_tools
+from autohotkey_mcp.tools import register_scriptlet_tools
 from autohotkey_mcp.tools.scriptlets import get_running_overview
 
 PORT = int(os.getenv("PORT", "10746"))
@@ -34,10 +32,7 @@ _AI_GENERATED = _DEPOT / "scriptlets" / "ai_generated"
 
 mcp = FastMCP("autohotkey-mcp")
 register_scriptlet_tools(mcp)
-register_prefab_tools(mcp)
 register_prompt_resources(mcp)
-register_prompts(mcp)
-register_providers(mcp)
 
 app = FastAPI(title="AutoHotkey MCP", version="0.1.0")
 

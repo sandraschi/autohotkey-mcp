@@ -1,5 +1,7 @@
 # autohotkey-mcp
 
+[![FastMCP Version](https://img.shields.io/badge/FastMCP-3.2-blue?style=flat-square&logo=python&logoColor=white)](https://github.com/sandraschi/fastmcp) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat-square&logo=biome&logoColor=white)](https://biomejs.dev/) [![Built with Just](https://img.shields.io/badge/Built_with-Just-000000?style=flat-square&logo=gnu-bash&logoColor=white)](https://github.com/casey/just)
+
 **Run and manage AutoHotkey v2 scriptlets from your AI assistant** — list what’s installed, launch or stop scripts, peek at source, and (optionally) draft new snippets in a safe sandbox. A small web app gives you help, a chat-style generator, and a live view of what’s running.
 
 | | |
@@ -29,7 +31,7 @@
 | `AUTOHOTKEY_LLM_API_KEY` | (unset) | Optional Bearer token for local servers that require it. `OPENAI_API_KEY` is also read. |
 | `AUTOHOTKEY_LLM_TIMEOUT` | `120` | HTTP completion timeout (seconds). |
 
-**LLM architecture:** **FastMCP 3.1 sampling** (`Context.sample`) is the **primary** path for `generate_scriptlet` / `refine_ahk_prompt` inside MCP hosts (e.g. Cursor). **Local HTTP** (`AUTOHOTKEY_LLM_*`, Ollama/LM Studio) is the **fallback** when sampling is unavailable, and powers the **web SPA** Chat + generate form (browsers have no MCP context). No file is written if both paths fail or validation fails.
+**LLM architecture:** **FastMCP 3.2 sampling** (`Context.sample`) is the **primary** path for `generate_scriptlet` / `refine_ahk_prompt` inside MCP hosts (e.g. Cursor). **Local HTTP** (`AUTOHOTKEY_LLM_*`, Ollama/LM Studio) is the **fallback** when sampling is unavailable, and powers the **web SPA** Chat + generate form (browsers have no MCP context). No file is written if both paths fail or validation fails.
 
 **MCP resources (agents):** Preset prompt catalog is exposed as read-only resources: `ahk://prompts/catalog` (full JSON list), `ahk://prompts/categories`, `ahk://prompts/{prompt_id}` (one entry; JSON error if id unknown).
 
@@ -69,7 +71,7 @@ Commands below assume the **repository root** unless noted.
 
 ## Run
 
-**Single process (FastMCP 3.1 dual transport):** stdio for Cursor/Claude and HTTP on 10746.
+**Single process (FastMCP 3.2 dual transport):** stdio for Cursor/Claude and HTTP on 10746.
 ```powershell
 uv sync
 uv run autohotkey-mcp
@@ -91,3 +93,14 @@ Or: `just run` / `just server`.
 - **Ports:** Backend 10746, frontend 10747 (user-facing). Register in robofang `docs/standards/WEBAPP_PORTS.md` if using the Hub.
 - **Health:** `GET http://127.0.0.1:10746/health` (frontend proxies `/health` to backend).
 - **Tool invoke:** `POST /tool` with `{"name": "...", "arguments": {...}}` (RoboFang bridge style).
+
+
+## 🛡️ Industrial Quality Stack
+
+This project adheres to **SOTA 14.1** industrial standards for high-fidelity agentic orchestration:
+
+- **Python (Core)**: [Ruff](https://astral.sh/ruff) for linting and formatting. Zero-tolerance for `print` statements in core handlers (`T201`).
+- **Webapp (UI)**: [Biome](https://biomejs.dev/) for sub-millisecond linting. Strict `noConsoleLog` enforcement.
+- **Protocol Compliance**: Hardened `stdout/stderr` isolation to ensure crash-resistant JSON-RPC communication.
+- **Automation**: [Justfile](./justfile) recipes for all fleet operations (`just lint`, `just fix`, `just dev`).
+- **Security**: Automated audits via `bandit` and `safety`.

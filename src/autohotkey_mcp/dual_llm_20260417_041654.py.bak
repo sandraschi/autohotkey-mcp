@@ -1,12 +1,8 @@
-"""LLM completion: **primary** = FastMCP 3.2 `Context.sample` (host / MCP client LLM).
+"""LLM completion: **primary** = FastMCP 3.1 `Context.sample` (host / MCP client LLM).
 
 **Fallback** = localhost OpenAI-compatible HTTP (Ollama, LM Studio, etc.) via `AUTOHOTKEY_LLM_*`.
-Used for script generation, prompt refinement, and any tool that needs a model when sampling is
-unavailable (e.g. HTTP-only SPA or headless runs).
-
-FastMCP 3.2 note: `ctx.sample()` accepts either a string (single user message) or a list of
-SamplingMessage dicts. The `temperature` parameter may not be supported by all hosts — we pass it
-as a kwarg and catch TypeError so we degrade gracefully on restricted hosts.
+Used for script generation, prompt refinement, and any tool that needs a model when sampling is unavailable
+(e.g. HTTP-only SPA or headless runs).
 """
 
 from __future__ import annotations
@@ -27,7 +23,7 @@ async def complete_dual_path(
     temperature: float = 0.3,
     max_tokens: int = 8192,
 ) -> tuple[str | None, str | None]:
-    """Return (text, source) where source is ``"sampling"`` | ``"http"`` | None.
+    """Return (text, source) where source is ``\"sampling\"`` | ``\"http\"`` | None.
 
     **Order (intentional):**
 
@@ -35,6 +31,9 @@ async def complete_dual_path(
        intended path for Cursor, Claude Desktop, and other MCP hosts that expose the client's LLM.
     2. **Local HTTP** — only if sampling did not return text (no context, unsupported host, error,
        or empty response) *and* ``http_llm_available()`` is true.
+
+    Local HTTP is not a "second-class" model in quality terms; it is the **offline / SPA / API**
+    path when there is no MCP sampling session.
     """
     raw: str | None = None
     src: str | None = None
@@ -42,21 +41,12 @@ async def complete_dual_path(
 
     if ctx is not None:
         try:
-            # FastMCP 3.2: try with temperature first; fall back without if unsupported
-            try:
-                result = await ctx.sample(
-                    messages=text_in,
-                    system_prompt=system,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                )
-            except TypeError:
-                # Some hosts / FastMCP builds don't accept temperature kwarg
-                result = await ctx.sample(
-                    messages=text_in,
-                    system_prompt=system,
-                    max_tokens=max_tokens,
-                )
+            result = await ctx.sample(
+                messages=text_in,
+                system_prompt=system,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
             text = getattr(result, "text", None)
             if not (isinstance(text, str) and text.strip()):
                 alt = getattr(result, "result", None)

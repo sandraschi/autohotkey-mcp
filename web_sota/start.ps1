@@ -1,3 +1,13 @@
+﻿Param([switch]$Headless)
+
+# --- SOTA Headless Standard ---
+if ($Headless -and ($Host.UI.RawUI.WindowTitle -notmatch 'Hidden')) {
+    Start-Process pwsh -ArgumentList '-NoProfile', '-File', $PSCommandPath, '-Headless' -WindowStyle Hidden
+    exit
+}
+$WindowStyle = if ($Headless) { 'Hidden' } else { 'Normal' }
+# ------------------------------
+
 # Fleet-standard web_sota launcher: backend (10746) + SPA frontend (10747).
 # Retractable sidebar, multiple pages (Overview, Help, Scriptlets, Status).
 $BackendPort = 10746
@@ -6,12 +16,7 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $WebSota = $PSScriptRoot
 
 # 1. Kill squatters on backend and frontend ports
-foreach ($port in @($BackendPort, $FrontendPort)) {
-    $pids = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 4 } | Select-Object -ExpandProperty OwningProcess -Unique
-    foreach ($p in $pids) {
-        try { Stop-Process -Id $p -Force -ErrorAction Stop } catch { }
-    }
-}
+npx --yes kill-port $BackendPort $FrontendPort 2>$null
 
 # 2. Start backend from repo root
 Set-Location $ProjectRoot
@@ -40,3 +45,4 @@ Start-Sleep -Seconds 4
 
 # 6. Open SPA in browser (frontend port)
 Start-Process "http://127.0.0.1:${FrontendPort}/"
+

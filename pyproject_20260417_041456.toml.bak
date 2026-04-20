@@ -1,20 +1,19 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "autohotkey-mcp"
-version = "0.2.0"
-description = "MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata, AI generation (sampling), prefab UI cards, MCP prompts. Uses ScriptletCOMBridge and autohotkey-test repo as depot."
+version = "0.1.0"
+description = "MCP server for AutoHotkey scriptlets: list, run, stop, get source/metadata; optional AI script generation (sandbox). Uses ScriptletCOMBridge and autohotkey-test repo as depot."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastmcp>=3.2",
+    "fastmcp>=3.1",
     "fastapi>=0.95",
     "httpx>=0.24",
     "prefab-ui>=0.14.0",
     "uvicorn>=0.21",
-    "hatchling>=1.29.0",
 ]
 
 [project.optional-dependencies]
@@ -23,8 +22,8 @@ dev = ["pytest>=7", "pytest-asyncio>=0.21", "ruff>=0.8"]
 [project.scripts]
 autohotkey-mcp = "autohotkey_mcp.server:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/autohotkey_mcp"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

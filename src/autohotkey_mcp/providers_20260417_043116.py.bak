@@ -1,0 +1,46 @@
+"""FastMCP 3.2 providers for autohotkey-mcp.
+
+Registers a SkillsDirectoryProvider pointing at the .cursor/skills directory
+so agents using CodeMode can discover AHK v2 authoring skills without knowing
+the exact tool names upfront.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from pathlib import Path
+
+from fastmcp import FastMCP
+
+logger = logging.getLogger(__name__)
+
+# Skills dir is the .cursor/skills folder in the repo root (already present in autohotkey-mcp)
+_REPO_ROOT = Path(__file__).parent.parent.parent.parent  # src/autohotkey_mcp -> repo root
+_DEFAULT_SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
+
+
+def register_providers(mcp: FastMCP) -> None:
+    """Register FastMCP 3.2 providers: SkillsDirectoryProvider for AHK skills."""
+    skills_dir = Path(os.getenv("AUTOHOTKEY_SKILLS_DIR", str(_DEFAULT_SKILLS_DIR)))
+
+    if not skills_dir.exists():
+        logger.info(
+            "Skills directory not found at %s — skipping SkillsDirectoryProvider registration. "
+            "Set AUTOHOTKEY_SKILLS_DIR or create .cursor/skills/ in the repo root.",
+            skills_dir,
+        )
+        return
+
+    try:
+        from fastmcp.server.providers import SkillsDirectoryProvider  # type: ignore[import]
+
+        provider = SkillsDirectoryProvider(skills_dir)
+        mcp.add_provider(provider)
+        logger.info("Registered SkillsDirectoryProvider from %s", skills_dir)
+    except (ImportError, AttributeError) as e:
+        logger.warning(
+            "SkillsDirectoryProvider unavailable (fastmcp<3.2 or API changed): %s", e
+        )
+    except Exception as e:
+        logger.warning("Failed to register SkillsDirectoryProvider: %s", e)

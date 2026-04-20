@@ -34,10 +34,7 @@ _AI_GENERATED = _DEPOT / "scriptlets" / "ai_generated"
 
 mcp = FastMCP("autohotkey-mcp")
 register_scriptlet_tools(mcp)
-register_prefab_tools(mcp)
 register_prompt_resources(mcp)
-register_prompts(mcp)
-register_providers(mcp)
 
 app = FastAPI(title="AutoHotkey MCP", version="0.1.0")
 

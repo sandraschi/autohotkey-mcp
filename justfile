@@ -1,3 +1,5 @@
+set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+
 # AutoHotkey MCP – just recipes
 # Usage: just <recipe>   or   just --list
 

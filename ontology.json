@@ -1,0 +1,46 @@
+{
+  "name": "autohotkey-mcp",
+  "domain": "automation.windows.ahk",
+  "version": "1.0.0",
+  "description": "Integration ontology for AutoHotkey v2 scriptlet management and AI generation.",
+  "entities": {
+    "scriptlet": {
+      "properties": {
+        "id": "Unique identifier (filename without extension)",
+        "name": "Human-readable name",
+        "description": "Functional description from @description header",
+        "hotkeys": "List of triggers from @hotkeys header",
+        "category": "Classification (e.g., productivity, windows, media)",
+        "running": "Boolean status"
+      },
+      "actions": ["run", "stop", "list", "get_source", "get_metadata"]
+    },
+    "prompt": {
+      "properties": {
+        "id": "System prompt identifier",
+        "title": "Short title",
+        "category": "Target purpose",
+        "tags": "Thematic tags"
+      },
+      "actions": ["list", "refine", "generate"]
+    }
+  },
+  "capabilities": {
+    "sampling": true,
+    "dual_transport": true,
+    "web_dashboard": true,
+    "mini_help": true
+  },
+  "relationships": [
+    {
+      "subject": "agent",
+      "predicate": "uses",
+      "object": "scriptlet"
+    },
+    {
+      "subject": "prompt",
+      "predicate": "generates",
+      "object": "scriptlet"
+    }
+  ]
+}
