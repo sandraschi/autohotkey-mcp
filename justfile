@@ -3,8 +3,9 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 # AutoHotkey MCP – just recipes
 # Usage: just <recipe>   or   just --list
 
+# Open the interactive recipe dashboard in the browser
 default:
-    just --list
+    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
 
 stats:
     uv run python tools/repo_stats.py

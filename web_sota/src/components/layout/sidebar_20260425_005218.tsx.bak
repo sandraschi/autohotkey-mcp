@@ -8,7 +8,6 @@ import {
   Layers,
   Activity,
   Wand2,
-  Settings2,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";

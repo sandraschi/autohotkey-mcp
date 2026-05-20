@@ -1,0 +1,5 @@
+{
+  "name": "autohotkey-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata; sampling-first generation; fleet SPA (Chat, Running) on 10746/10747."
+}

@@ -1,5 +1,5 @@
 {
   "name": "autohotkey-mcp",
-  "version": "0.1.0",
-  "description": "MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata; sampling-first generation; fleet SPA (Chat, Running) on 10746/10747."
+  "version": "0.2.0",
+  "description": "MCP server for AutoHotkey v2 scriptlets: list/run/stop/source/metadata, sampling-first AI generation, 5 MCP prompts, 6 Prefab UI cards (DataTable/Dashboard/Tabs/Code/Badge/Metric), SkillsDirectoryProvider. Backend 10746, SPA 10747. Depot: autohotkey-test."
 }

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { HelpCircle, FileCode, Activity, MessageSquare, Layers, Wand2 } from "lucide-react";
+import { HelpCircle, FileCode, Activity, MessageSquare, Layers } from "lucide-react";
 
 export function Dashboard() {
   return (
@@ -44,14 +44,6 @@ export function Dashboard() {
           <Layers className="h-8 w-8 text-amber-500 mb-2" />
           <h2 className="font-semibold text-white">Running</h2>
           <p className="text-sm">Hotkeys, descriptions, PIDs — kill bridge or direct-run instances.</p>
-        </Link>
-        <Link
-          to="/tools"
-          className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 text-slate-300 hover:border-slate-700 hover:bg-slate-800/50 transition-colors"
-        >
-          <Wand2 className="h-8 w-8 text-amber-500 mb-2" />
-          <h2 className="font-semibold text-white">Prefab Tools</h2>
-          <p className="text-sm">Invoke the 6 prefab-ui tools and inspect their output.</p>
         </Link>
         <Link
           to="/status"

@@ -1,0 +1,603 @@
+"""Prefab UI tools for autohotkey-mcp.
+
+Six @mcp.tool(app=True) surfaces, all using rich prefab-ui 0.19.1 components:
+
+  show_scriptlets_card        — DataTable: all scriptlets, Dot status, Badge category, search+paginate
+  show_running_scriptlets_card — Dashboard: Metric tiles + DataTable of live instances
+  show_ahk_help_card          — Tabs per help level, Markdown rendering per tab
+  show_scriptlet_detail_card  — single scriptlet: Code block + Badge metadata row + Kbd hotkeys
+  show_generation_result_card — generated script: Code block + Badge row (category, gen source, path)
+  show_server_status_card     — Dashboard: Metric tiles + Badge status + config table
+
+Registration is controlled by env AUTOHOTKEY_PREFAB_APPS (0 = skip, default on).
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from pathlib import Path
+from typing import Any
+
+import httpx
+from fastmcp import FastMCP
+from fastmcp.tools import ToolResult
+from prefab_ui.app import PrefabApp
+from prefab_ui.components import (
+    Accordion,
+    AccordionItem,
+    Badge,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+    Code,
+    Column,
+    Dashboard,
+    DashboardItem,
+    DataTable,
+    DataTableColumn,
+    Dot,
+    H3,
+    Kbd,
+    Markdown,
+    Metric,
+    Muted,
+    Row,
+    Separator,
+    Tab,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+    Tabs,
+    Text,
+)
+
+logger = logging.getLogger(__name__)
+
+BRIDGE_URL = os.getenv("AUTOHOTKEY_BRIDGE_URL", "http://127.0.0.1:10744").rstrip("/")
+DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
+PORT = os.getenv("PORT", "10746")
+
+# Category → Badge variant mapping
+_CAT_VARIANT: dict[str, str] = {
+    "hotkeys": "default",
+    "gui": "info",
+    "clipboard": "secondary",
+    "files": "warning",
+    "windows": "outline",
+    "strings": "secondary",
+    "system": "destructive",
+    "productivity": "success",
+    "games": "info",
+    "testing": "warning",
+    "network": "outline",
+    "ai_generated": "success",
+    "general": "secondary",
+}
+
+
+def _prefab_enabled() -> bool:
+    return os.getenv("AUTOHOTKEY_PREFAB_APPS", "1").lower() not in ("0", "false", "no")
+
+
+def _cat_badge(cat: str) -> Badge:
+    variant = _CAT_VARIANT.get((cat or "general").lower(), "secondary")
+    return Badge(cat or "general", variant=variant)
+
+
+def _status_dot(running: bool) -> Dot:
+    return Dot(variant="success" if running else "muted", size="sm")
+
+
+def _plain_dot(running: bool) -> str:
+    return "● " if running else "○ "
+
+
+def register_prefab_tools(mcp: FastMCP) -> None:
+    """Register Prefab App tools. Skipped when AUTOHOTKEY_PREFAB_APPS=0."""
+
+    if not _prefab_enabled():
+        logger.info("AUTOHOTKEY_PREFAB_APPS=0 — skipping Prefab tool registration")
+        return
+
+    from autohotkey_mcp.tools.scriptlets import (
+        _bridge_get,
+        _enrich_scriptlet_categories,
+        _list_scriptlets_direct,
+        _read_metadata,
+        _depot_path,
+        get_running_overview,
+    )
+    from autohotkey_mcp import help_content
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 1. SCRIPTLETS LIST
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @mcp.tool(app=True)
+    async def show_scriptlets_card() -> ToolResult:
+        """
+        Show all AutoHotkey scriptlets as a rich Prefab card.
+        DataTable with Dot status indicator, Badge category, sortable columns, search, pagination.
+        Uses bridge when available; falls back to depot scan.
+        """
+        try:
+            data = await _bridge_get("/scriptlets")
+            raw = data if isinstance(data, list) else data.get("scriptlets", []) if isinstance(data, dict) else []
+            items = _enrich_scriptlet_categories(raw if isinstance(raw, list) else [])
+            source = "bridge"
+        except (httpx.RequestError, Exception):
+            items = _list_scriptlets_direct()
+            source = "depot"
+
+        total = len(items)
+        running_count = sum(1 for s in items if s.get("running"))
+
+        # Plain-text fallback
+        lines = [f"AutoHotkey Scriptlets — {total} total, {running_count} running [{source}]"]
+        for s in items:
+            lines.append(
+                f"{_plain_dot(bool(s.get('running')))}"
+                f"{s.get('id','?')}  [{s.get('category','general')}]  "
+                f"{(s.get('description') or '')[:70]}"
+            )
+        plain = "\n".join(lines)
+
+        # Build DataTable rows — cells can be Component instances
+        rows: list[dict[str, Any]] = []
+        for s in items:
+            rows.append({
+                "status": _status_dot(bool(s.get("running"))),
+                "id": s.get("id") or "?",
+                "category": _cat_badge(s.get("category") or "general"),
+                "description": (s.get("description") or "")[:90],
+            })
+
+        view = Column(
+            Card(
+                CardHeader(
+                    Row(
+                        CardTitle(f"AutoHotkey Scriptlets"),
+                        Badge(f"{running_count} running", variant="success"),
+                        Badge(f"{total} total", variant="secondary"),
+                        gap=2,
+                        align="center",
+                    ),
+                    CardDescription(f"Source: {source}  ·  depot: {DEPOT}"),
+                ),
+                CardContent(
+                    DataTable(
+                        columns=[
+                            DataTableColumn(key="status", header="", width="40px"),
+                            DataTableColumn(key="id", header="ID", sortable=True),
+                            DataTableColumn(key="category", header="Category", sortable=True),
+                            DataTableColumn(key="description", header="Description"),
+                        ],
+                        rows=rows,
+                        search=True,
+                        paginated=True,
+                        page_size=20,
+                    )
+                ),
+                css_class="w-full",
+            )
+        )
+
+        return ToolResult(
+            content=plain,
+            structured_content=PrefabApp(view=view, title="AHK Scriptlets"),
+        )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 2. RUNNING SCRIPTLETS
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @mcp.tool(app=True)
+    async def show_running_scriptlets_card() -> ToolResult:
+        """
+        Show currently running AutoHotkey scriptlets as a Prefab card.
+        Dashboard with Metric tiles (count, direct/bridge split) and a DataTable of live instances.
+        """
+        data = await get_running_overview()
+        instances: list[dict[str, Any]] = data.get("instances", [])
+        count = len(instances)
+        direct_count = sum(1 for i in instances if i.get("source") == "direct")
+        bridge_count = sum(1 for i in instances if i.get("source") == "bridge")
+
+        # Plain-text fallback
+        if count == 0:
+            plain = "No AutoHotkey scriptlets currently running."
+        else:
+            lines = [f"Running: {count}  (direct: {direct_count}, bridge: {bridge_count})"]
+            for inst in instances:
+                pid_str = f" PID {inst['pid']}" if inst.get("pid") else ""
+                lines.append(
+                    f"● {inst.get('script_id','?')}{pid_str}  "
+                    f"[{inst.get('source','?')}]  "
+                    f"{(inst.get('hotkeys') or '')}  "
+                    f"{(inst.get('description') or '')[:60]}"
+                )
+            plain = "\n".join(lines)
+
+        # DataTable rows
+        rows: list[dict[str, Any]] = []
+        for inst in instances:
+            src = inst.get("source") or "?"
+            hk_text = inst.get("hotkeys") or ""
+            rows.append({
+                "script_id": inst.get("script_id") or "?",
+                "pid": str(inst["pid"]) if inst.get("pid") else "—",
+                "source": Badge(src, variant="info" if src == "bridge" else "default"),
+                "hotkeys": hk_text,
+                "description": (inst.get("description") or "")[:80],
+            })
+
+        if count == 0:
+            table_or_empty: Any = Text("No scriptlets currently running.")
+        else:
+            table_or_empty = DataTable(
+                columns=[
+                    DataTableColumn(key="script_id", header="Script ID", sortable=True),
+                    DataTableColumn(key="pid", header="PID", width="80px", align="right"),
+                    DataTableColumn(key="source", header="Source", width="90px"),
+                    DataTableColumn(key="hotkeys", header="Hotkeys"),
+                    DataTableColumn(key="description", header="Description"),
+                ],
+                rows=rows,
+                search=False,
+            )
+
+        view = Column(
+            # Metric row
+            Dashboard(
+                columns=3,
+                row_height=90,
+                gap=4,
+                css_class="mb-4",
+                children=[
+                    DashboardItem(col=1, row=1, col_span=1, children=[
+                        Metric(label="Running", value=count)
+                    ]),
+                    DashboardItem(col=2, row=1, col_span=1, children=[
+                        Metric(label="Direct (PID)", value=direct_count)
+                    ]),
+                    DashboardItem(col=3, row=1, col_span=1, children=[
+                        Metric(label="Bridge", value=bridge_count)
+                    ]),
+                ],
+            ),
+            # Instance table
+            Card(
+                CardHeader(
+                    Row(
+                        CardTitle("Live Instances"),
+                        Badge(f"{count}", variant="success" if count > 0 else "secondary"),
+                        gap=2,
+                        align="center",
+                    ),
+                ),
+                CardContent(table_or_empty),
+                css_class="w-full",
+            ),
+        )
+
+        return ToolResult(
+            content=plain,
+            structured_content=PrefabApp(view=view, title="Running AHK Scriptlets"),
+        )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 3. HELP — Tabs per level, Markdown rendering
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @mcp.tool(app=True)
+    async def show_ahk_help_card(level: str = "quick") -> ToolResult:
+        """
+        Show AutoHotkey v2 help as a rich Prefab card.
+        Tabs for each help level (quick / reference / language / usage / tools / mcp_server),
+        content rendered as Markdown. level selects the initially active tab.
+        """
+        levels = list(help_content.LEVELS.keys())
+        active = level if level in levels else "quick"
+        plain = f"AHK Help [{active}]\n\n{help_content.get_help(level=active)}"
+
+        with Tabs(value=active, variant="line") as tabs:
+            for lv in levels:
+                content_md = help_content.get_help(level=lv)
+                with Tab(lv):
+                    Markdown(content_md)
+
+        view = Card(
+            CardHeader(
+                CardTitle("AutoHotkey v2 Help"),
+                CardDescription("Six reference levels — click tabs to switch"),
+            ),
+            CardContent(tabs),
+            css_class="w-full",
+        )
+
+        return ToolResult(
+            content=plain,
+            structured_content=PrefabApp(view=view, title=f"AHK Help: {active}"),
+        )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 4. SINGLE SCRIPTLET DETAIL
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @mcp.tool(app=True)
+    async def show_scriptlet_detail_card(script_id: str) -> ToolResult:
+        """
+        Show a single scriptlet as a rich Prefab card.
+        Displays full source in a Code block, metadata Badges, and Kbd hotkey chips.
+        script_id: scriptlet id (without .ahk)
+        """
+        script_id = script_id.strip().removesuffix(".ahk")
+        path = _depot_path(script_id)
+
+        if not path.exists():
+            plain = f"Scriptlet '{script_id}' not found in depot."
+            view = Card(
+                CardContent(Text(plain)),
+            )
+            return ToolResult(content=plain, structured_content=PrefabApp(view=view, title="Not Found"))
+
+        meta = _read_metadata(path)
+        source = path.read_text(encoding="utf-8", errors="replace")
+        name = meta.get("name") or script_id
+        desc = meta.get("description") or ""
+        version = meta.get("version") or ""
+        category = meta.get("category") or "general"
+        hotkeys_raw = meta.get("hotkeys") or meta.get("hotkey") or ""
+        hotkeys = [h.strip() for h in hotkeys_raw.replace(",", " ").split() if h.strip()]
+
+        plain = f"{name} [{category}]{f'  v{version}' if version else ''}\n{desc}\n\nHotkeys: {hotkeys_raw or 'none'}\n\n{source[:800]}"
+
+        # Hotkey row — each key combo gets a Kbd
+        if hotkeys:
+            hk_row: Any = Row(*[Kbd(h) for h in hotkeys], gap=1)
+        else:
+            hk_row = Muted("No hotkeys defined")
+
+        view = Card(
+            CardHeader(
+                Row(
+                    CardTitle(name),
+                    _cat_badge(category),
+                    *(([Badge(f"v{version}", variant="outline")] if version else [])),
+                    gap=2,
+                    align="center",
+                ),
+                CardDescription(desc) if desc else None,
+            ),
+            CardContent(
+                Column(
+                    # Hotkey chips
+                    Row(Muted("Hotkeys:"), hk_row, gap=2, align="center"),
+                    Separator(spacing=2),
+                    # Metadata table
+                    Table(
+                        TableHeader(TableRow(
+                            TableHead("Field"),
+                            TableHead("Value"),
+                        )),
+                        TableBody(*[
+                            TableRow(TableCell(k), TableCell(str(v)))
+                            for k, v in meta.items()
+                            if k not in ("hotkeys", "hotkey", "name", "description", "category", "version")
+                        ]) if any(k not in ("hotkeys","hotkey","name","description","category","version") for k in meta) else None,
+                        css_class="mb-4 text-sm",
+                    ) if meta else None,
+                    Separator(spacing=2),
+                    H3("Source"),
+                    Code(source, language="autohotkey"),
+                    gap=3,
+                ),
+            ),
+            css_class="w-full",
+        )
+
+        return ToolResult(
+            content=plain,
+            structured_content=PrefabApp(view=view, title=f"AHK: {name}"),
+        )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 5. GENERATION RESULT
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @mcp.tool(app=True)
+    async def show_generation_result_card(script_id: str) -> ToolResult:
+        """
+        Show a freshly generated scriptlet (from ai_generated/) as a rich Prefab card.
+        Renders the source in a Code block with metadata Badges. Use after generate_scriptlet.
+        script_id: stem returned by generate_scriptlet (without .ahk)
+        """
+        script_id = script_id.strip().removesuffix(".ahk")
+
+        depot_root = DEPOT
+        ai_path = depot_root / "scriptlets" / "ai_generated" / f"{script_id}.ahk"
+        fallback = depot_root / "scriptlets" / f"{script_id}.ahk"
+        path = ai_path if ai_path.exists() else (fallback if fallback.exists() else None)
+
+        if path is None:
+            plain = f"Generated scriptlet '{script_id}' not found. Run generate_scriptlet first."
+            view = Card(CardContent(Text(plain)))
+            return ToolResult(content=plain, structured_content=PrefabApp(view=view, title="Not Found"))
+
+        meta = _read_metadata(path)
+        source = path.read_text(encoding="utf-8", errors="replace")
+        name = meta.get("name") or script_id
+        desc = meta.get("description") or ""
+        category = meta.get("category") or "ai_generated"
+        version = meta.get("version") or "1.0.0"
+        hotkeys_raw = meta.get("hotkeys") or meta.get("hotkey") or ""
+        is_ai = "ai_generated" in str(path)
+
+        plain = (
+            f"Generated: {name}\n"
+            f"Category: {category}  Version: {version}\n"
+            f"Path: {path}\n\n"
+            f"{desc}\n\n"
+            f"{source[:600]}..."
+        )
+
+        view = Card(
+            CardHeader(
+                Row(
+                    CardTitle(f"Generated: {name}"),
+                    _cat_badge(category),
+                    Badge(f"v{version}", variant="outline"),
+                    Badge("AI Generated", variant="success") if is_ai else None,
+                    gap=2,
+                    align="center",
+                ),
+                CardDescription(desc) if desc else None,
+            ),
+            CardContent(
+                Column(
+                    # Path info
+                    Row(
+                        Muted("Saved to:"),
+                        Text(str(path)),
+                        gap=2,
+                        align="center",
+                    ),
+                    *(
+                        [Row(Muted("Hotkeys:"), *[Kbd(h.strip()) for h in hotkeys_raw.replace(",", " ").split() if h.strip()], gap=1, align="center")]
+                        if hotkeys_raw.strip() else []
+                    ),
+                    Separator(spacing=2),
+                    # Warning alert
+                    Card(
+                        CardContent(
+                            Text("⚠ Review before moving to main scriptlets/. Untrusted scripts can harm your machine.")
+                        ),
+                        css_class="border-yellow-400 bg-yellow-50 dark:bg-yellow-950 mb-2",
+                    ),
+                    Separator(spacing=2),
+                    H3("Generated Source"),
+                    Code(source, language="autohotkey"),
+                    gap=3,
+                ),
+            ),
+            css_class="w-full",
+        )
+
+        return ToolResult(
+            content=plain,
+            structured_content=PrefabApp(view=view, title=f"Generated: {name}"),
+        )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 6. SERVER STATUS
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @mcp.tool(app=True)
+    async def show_server_status_card() -> ToolResult:
+        """
+        Show autohotkey-mcp server status as a rich Prefab card.
+        Dashboard with Metric tiles (scriptlet count, running, bridge status) plus
+        config table (ports, depot path, AHK exe, env flags).
+        """
+        # Count scriptlets
+        items = _list_scriptlets_direct()
+        total = len(items)
+        running_count = sum(1 for s in items if s.get("running"))
+
+        # Probe bridge
+        bridge_up = False
+        bridge_error = ""
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(f"{BRIDGE_URL}/scriptlets", timeout=2.0)
+                bridge_up = r.status_code < 400
+        except Exception as e:
+            bridge_error = str(e)[:60]
+
+        # AHK exe
+        from autohotkey_mcp.tools.scriptlets import _find_ahk_exe
+        ahk_exe = _find_ahk_exe() or "not found"
+
+        plain = (
+            f"autohotkey-mcp Status\n"
+            f"Port: {PORT}  Bridge: {'UP' if bridge_up else 'DOWN'}  ({BRIDGE_URL})\n"
+            f"Scriptlets: {total}  Running: {running_count}\n"
+            f"Depot: {DEPOT}\n"
+            f"AHK exe: {ahk_exe}\n"
+        )
+
+        # Config table rows
+        config_rows = [
+            {"key": "MCP Port", "value": PORT},
+            {"key": "Bridge URL", "value": BRIDGE_URL},
+            {"key": "Bridge Status", "value": "UP" if bridge_up else f"DOWN ({bridge_error})"},
+            {"key": "Script Depot", "value": str(DEPOT)},
+            {"key": "AHK Executable", "value": ahk_exe},
+            {"key": "LLM Base URL", "value": os.getenv("AUTOHOTKEY_LLM_BASE_URL", "not set")},
+            {"key": "LLM Model", "value": os.getenv("AUTOHOTKEY_LLM_MODEL", "not set")},
+            {"key": "Prefab Apps", "value": os.getenv("AUTOHOTKEY_PREFAB_APPS", "1 (default)")},
+        ]
+
+        bridge_badge = Badge("UP", variant="success") if bridge_up else Badge("DOWN", variant="destructive")
+        ahk_badge = Badge("found", variant="success") if ahk_exe != "not found" else Badge("missing", variant="destructive")
+
+        view = Column(
+            # KPI row
+            Dashboard(
+                columns=4,
+                row_height=90,
+                gap=4,
+                css_class="mb-4",
+                children=[
+                    DashboardItem(col=1, row=1, col_span=1, children=[
+                        Metric(label="Scriptlets", value=total)
+                    ]),
+                    DashboardItem(col=2, row=1, col_span=1, children=[
+                        Metric(label="Running", value=running_count)
+                    ]),
+                    DashboardItem(col=3, row=1, col_span=1, children=[
+                        Card(CardContent(
+                            Column(
+                                Muted("Bridge"),
+                                bridge_badge,
+                            )
+                        ))
+                    ]),
+                    DashboardItem(col=4, row=1, col_span=1, children=[
+                        Card(CardContent(
+                            Column(
+                                Muted("AHK Exe"),
+                                ahk_badge,
+                            )
+                        ))
+                    ]),
+                ],
+            ),
+            # Config table
+            Card(
+                CardHeader(CardTitle("Configuration")),
+                CardContent(
+                    DataTable(
+                        columns=[
+                            DataTableColumn(key="key", header="Setting", width="200px", sortable=False),
+                            DataTableColumn(key="value", header="Value"),
+                        ],
+                        rows=config_rows,
+                        search=False,
+                        paginated=False,
+                    )
+                ),
+                css_class="w-full",
+            ),
+        )
+
+        return ToolResult(
+            content=plain,
+            structured_content=PrefabApp(view=view, title="AHK MCP Status"),
+        )

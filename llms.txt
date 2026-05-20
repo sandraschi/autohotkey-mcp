@@ -1,0 +1,35 @@
+# autohotkey-mcp
+
+MCP server for AutoHotkey v2 scriptlet management. List, run, stop, and inspect
+AHK scripts from any MCP host. AI generation via FastMCP sampling (Cursor/Claude)
+or local HTTP (Ollama/LM Studio). Fleet-standard web dashboard on 10746/10747.
+
+## Docs
+
+- [README](README.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [PRD](docs/PRD.md)
+
+## Tools
+
+- list_scriptlets, run_scriptlet, stop_scriptlet
+- get_scriptlet_source, get_scriptlet_metadata
+- generate_scriptlet, refine_ahk_prompt
+- list_running_scriptlets, list_generation_prompts
+- ahk_help, show_help
+- show_scriptlets_card, show_running_scriptlets_card
+- show_ahk_help_card, show_scriptlet_detail_card
+- show_generation_result_card, show_server_status_card
+
+## Config
+
+- AUTOHOTKEY_SCRIPT_DEPOT: path to autohotkey-test depot
+- AUTOHOTKEY_BRIDGE_URL: ScriptletCOMBridge base URL (default http://127.0.0.1:10744)
+- AUTOHOTKEY_EXE: path to AutoHotkey v2 exe
+- PORT: backend port (default 10746)
+- AUTOHOTKEY_LLM_BASE_URL / AUTOHOTKEY_LLM_MODEL: local LLM for HTTP fallback
+
+## Ports
+
+- 10746: FastAPI backend (MCP HTTP + REST API)
+- 10747: Vite React frontend (SPA)

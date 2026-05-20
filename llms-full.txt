@@ -1,0 +1,149 @@
+# autohotkey-mcp — Full Reference
+
+> FastMCP 3.2.4 | Python 3.12+ | Ports 10746/10747 | AHK depot: autohotkey-test
+
+## What it does
+
+Exposes AutoHotkey v2 scriptlet management as MCP tools. Connects to the
+ScriptletCOMBridge (AHK HTTP server on 10744) when running, falls back to
+direct depot scan + subprocess AHK launch. AI script generation uses FastMCP
+sampling (host LLM, e.g. Claude via Cursor) as primary path; localhost HTTP
+(Ollama/LM Studio) as fallback.
+
+## Architecture
+
+```
+Claude Desktop / Cursor
+    │  stdio (MCP)
+    ▼
+autohotkey-mcp (FastMCP 3.2)
+    ├── MCP tools (scriptlets, generate, help, prefab cards)
+    ├── MCP prompts (generate/refine/debug/migrate/review)
+    ├── MCP resources (ahk://prompts/*)
+    ├── SkillsDirectoryProvider (.cursor/skills/)
+    │
+    ├── FastAPI HTTP (10746)
+    │   ├── /api/scriptlets, /api/running, /api/help
+    │   ├── /api/generate_scriptlet, /api/chat, /api/refine_prompt
+    │   ├── /api/scriptlet/:id, /api/run_scriptlet, /api/stop_scriptlet
+    │   ├── /tool  (bridge: POST {name, arguments})
+    │   └── /health, /status, /help (mini HTML)
+    │
+    └── Vite React SPA (10747)
+        ├── Overview, Help, Chat, Scriptlets
+        ├── Scriptlets/:id (detail + run/stop)
+        ├── Running (live + kill)
+        ├── Prefab Tools (invoke all 6 prefab tools)
+        └── Status
+
+ScriptletCOMBridge.ahk (10744)  ← autohotkey-test depot
+    ├── GET /scriptlets  → JSON array
+    ├── GET /run/:name   → start .ahk
+    ├── GET /stop/:name  → stop .ahk
+    └── GET /dashboard   → HTML UI
+```
+
+## MCP Tools (16)
+
+### Scriptlet management
+- **list_scriptlets()** — list all scriptlets (bridge or depot scan); returns id, name, description, category, running
+- **run_scriptlet(script_id)** — run by id; bridge if up, else direct AHK + PID tracking
+- **stop_scriptlet(script_id, pid?)** — stop by id; optional pid for multi-instance direct runs
+- **list_running_scriptlets()** — live instances with hotkeys, description, PID, source
+- **get_scriptlet_source(script_id)** — full .ahk source from depot
+- **get_scriptlet_metadata(script_id)** — @key: value header fields
+
+### AI generation
+- **generate_scriptlet(prompt, filename?)** — sampling-first generate; fallback localhost HTTP; writes to ai_generated/ after validation only
+- **refine_ahk_prompt(rough, persona_id?)** — turn vague idea into precise prompt; same sampling path
+- **list_generation_prompts(category?)** — preset prompt catalog (ids, titles, tags)
+
+### Help
+- **ahk_help(level?, topic?)** — markdown help; levels: quick|reference|language|usage|tools|mcp_server
+- **show_help()** — returns URLs for mini-help and webapp
+
+### Prefab UI cards (app=True)
+- **show_scriptlets_card()** — DataTable: all scriptlets, Dot status, Badge category, search+paginate
+- **show_running_scriptlets_card()** — Dashboard KPIs (Metric) + DataTable of live instances
+- **show_ahk_help_card(level)** — Tabs per help level + Markdown content
+- **show_scriptlet_detail_card(script_id)** — Code block + Badge metadata + Kbd hotkeys
+- **show_generation_result_card(script_id)** — generated script Code block + safety warning
+- **show_server_status_card()** — Dashboard KPIs (bridge/exe status) + config DataTable
+
+## MCP Prompts (5)
+
+- **generate_ahk_scriptlet(description)** — full v2 generation system prompt with header requirements
+- **refine_ahk_idea(rough_idea)** — sharpen vague request into precise spec
+- **debug_ahk_script(source, error?)** — v1→v2 bug checklist + corrected output
+- **migrate_v1_to_v2(v1_source)** — migration table + annotated v2 output
+- **review_ahk_for_safety(source)** — RED/YELLOW/GREEN safety report + verdict
+
+## MCP Resources
+
+- **ahk://prompts/catalog** — full JSON array of preset prompts
+- **ahk://prompts/categories** — list of category strings
+- **ahk://prompts/{id}** — single preset or JSON error
+
+## FastMCP 3.2 Features Used
+
+- `@mcp.tool(app=True)` + `ToolResult` + `PrefabApp` → inline Prefab UI cards
+- `@mcp.prompt()` → 5 conversation starters
+- `@mcp.resource()` → prompt catalog resources
+- `SkillsDirectoryProvider(roots=.cursor/skills/)` → AHK authoring skills
+- `ctx.sample()` → sampling-first generation (temperature kwarg defensive)
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| AUTOHOTKEY_SCRIPT_DEPOT | d:/dev/repos/autohotkey-test | Depot root (must contain scriptlets/) |
+| AUTOHOTKEY_BRIDGE_URL | http://127.0.0.1:10744 | ScriptletCOMBridge base URL |
+| AUTOHOTKEY_EXE | (auto-detect) | AHK v2 exe path |
+| AUTOHOTKEY_MCP_HTTP | (auto) | 0 = force stdio-only |
+| PORT | 10746 | Backend port |
+| AUTOHOTKEY_LLM_BASE_URL | http://127.0.0.1:11434/v1 | Local LLM (Ollama/LM Studio) |
+| AUTOHOTKEY_LLM_MODEL | llama3.2 | Model id |
+| AUTOHOTKEY_LLM_API_KEY | (unset) | Optional bearer token |
+| AUTOHOTKEY_LLM_TIMEOUT | 120 | HTTP timeout (seconds) |
+| AUTOHOTKEY_PREFAB_APPS | 1 | 0 = disable prefab tool registration |
+| AUTOHOTKEY_SKILLS_DIR | .cursor/skills | Override skills dir for SkillsDirectoryProvider |
+
+## Start
+
+```powershell
+# Backend + SPA (opens browser)
+.\web_sota\start.ps1
+
+# Backend only (Cursor/MCP stdio auto-detected)
+uv run autohotkey-mcp
+
+# Just recipes
+just --list
+just run      # backend
+just web      # backend + frontend
+just lint
+just test
+```
+
+## Cursor / Claude Desktop
+
+```json
+{
+  "autohotkey-mcp": {
+    "command": "uv",
+    "args": ["--directory", "D:/Dev/repos/autohotkey-mcp", "run", "autohotkey-mcp"]
+  }
+}
+```
+
+## Health
+
+```
+GET http://127.0.0.1:10746/health
+→ {"ok": true, "service": "autohotkey-mcp", "port": 10746}
+```
+
+## Related
+
+- **autohotkey-test** — AHK scriptlet depot; ScriptletCOMBridge on 10744
+- **pywinauto-mcp** — native Windows UI automation via UIA tree; complements AHK

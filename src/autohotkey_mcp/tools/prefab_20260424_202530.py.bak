@@ -496,19 +496,13 @@ def register_prefab_tools(mcp: FastMCP) -> None:
                         with CardContent():
                             with Column(gap=1):
                                 Muted("Bridge")
-                                if bridge_up:
-                                    Badge("UP", variant="success")
-                                else:
-                                    Badge("DOWN", variant="destructive")
+                                Badge("UP", variant="success") if bridge_up else Badge("DOWN", variant="destructive")
                 with DashboardItem(col=4, row=1, col_span=1):
                     with Card():
                         with CardContent():
                             with Column(gap=1):
                                 Muted("AHK Exe")
-                                if ahk_found:
-                                    Badge("found", variant="success")
-                                else:
-                                    Badge("missing", variant="destructive")
+                                Badge("found", variant="success") if ahk_found else Badge("missing", variant="destructive")
             # Config table
             with Card(css_class="w-full"):
                 with CardHeader():

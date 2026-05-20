@@ -23,7 +23,6 @@ function App() {
           <Route path="/running" element={<Running />} />
           <Route path="/status" element={<Status />} />
           <Route path="/tools" element={<Tools />} />
-          <Route path="/settings" element={<LLMSettings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>

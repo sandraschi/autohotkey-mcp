@@ -247,22 +247,12 @@ export function Scriptlets() {
                     key={`${s.id ?? s.name ?? i}`}
                     className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 text-slate-300"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-amber-400">{s.name ?? s.id ?? "—"}</span>
-                        {s.running ? (
-                          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
-                            running
-                          </span>
-                        ) : null}
-                      </div>
-                      {(s.id ?? s.name) ? (
-                        <Link
-                          to={`/scriptlets/${encodeURIComponent(String(s.id ?? s.name))}`}
-                          className="text-[11px] text-slate-500 hover:text-amber-400 transition-colors shrink-0"
-                        >
-                          Detail →
-                        </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-amber-400">{s.name ?? s.id ?? "—"}</span>
+                      {s.running ? (
+                        <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                          running
+                        </span>
                       ) : null}
                     </div>
                     {s.description ? (

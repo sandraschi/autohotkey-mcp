@@ -8,7 +8,6 @@ import {
   Layers,
   Activity,
   Wand2,
-  Settings2,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -25,7 +24,6 @@ const navItems = [
   { href: "/scriptlets", label: "Scriptlets", icon: FileCode },
   { href: "/running", label: "Running", icon: Layers },
   { href: "/tools", label: "Prefab Tools", icon: Wand2 },
-  { href: "/settings", label: "LLM Settings", icon: Settings2 },
   { href: "/status", label: "Status", icon: Activity },
 ];
 

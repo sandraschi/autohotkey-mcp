@@ -7,8 +7,6 @@ import {
   MessageSquare,
   Layers,
   Activity,
-  Wand2,
-  Settings2,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -24,18 +22,11 @@ const navItems = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/scriptlets", label: "Scriptlets", icon: FileCode },
   { href: "/running", label: "Running", icon: Layers },
-  { href: "/tools", label: "Prefab Tools", icon: Wand2 },
-  { href: "/settings", label: "LLM Settings", icon: Settings2 },
   { href: "/status", label: "Status", icon: Activity },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
-
-  // /scriptlets/:id should keep Scriptlets highlighted
-  const activePath = location.pathname.startsWith("/scriptlets")
-    ? "/scriptlets"
-    : location.pathname;
 
   return (
     <aside
@@ -53,7 +44,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = activePath === item.href;
+          const isActive = location.pathname === item.href;
           return (
             <Link
               key={item.href}

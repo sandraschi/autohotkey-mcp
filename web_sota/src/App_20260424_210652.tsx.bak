@@ -6,9 +6,6 @@ import { Chat } from "@/pages/chat";
 import { Running } from "@/pages/running";
 import { Scriptlets } from "@/pages/scriptlets";
 import { Status } from "@/pages/status";
-import { Tools } from "@/pages/tools";
-import { Detail } from "@/pages/detail";
-import { LLMSettings } from "@/pages/settings";
 
 function App() {
   return (
@@ -19,11 +16,8 @@ function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/scriptlets" element={<Scriptlets />} />
-          <Route path="/scriptlets/:id" element={<Detail />} />
           <Route path="/running" element={<Running />} />
           <Route path="/status" element={<Status />} />
-          <Route path="/tools" element={<Tools />} />
-          <Route path="/settings" element={<LLMSettings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>

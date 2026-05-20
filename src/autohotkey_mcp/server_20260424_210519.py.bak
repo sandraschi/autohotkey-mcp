@@ -11,7 +11,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastmcp import FastMCP
@@ -32,9 +31,6 @@ PORT = int(os.getenv("PORT", "10746"))
 HOST = os.getenv("HOST", "127.0.0.1")
 _DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
 _AI_GENERATED = _DEPOT / "scriptlets" / "ai_generated"
-
-# Runtime LLM overrides — set via PUT /api/llm/settings, not persisted across restarts
-_llm_runtime: dict[str, Any] = {}
 
 mcp = FastMCP("autohotkey-mcp")
 register_scriptlet_tools(mcp)
@@ -237,129 +233,7 @@ async def api_refine_prompt(request: Request) -> JSONResponse:
     return JSONResponse(status_code=status, content=result)
 
 
-@app.get("/api/llm/settings")
-async def api_llm_settings() -> JSONResponse:
-    """SPA: current LLM provider settings (read from env / runtime overrides)."""
-    from autohotkey_mcp.ahk_llm import DEFAULT_BASE, DEFAULT_MODEL, DEFAULT_TIMEOUT, allowed_llm_base
-    base = _llm_runtime.get("base_url", DEFAULT_BASE)
-    model = _llm_runtime.get("model", DEFAULT_MODEL)
-    api_key_set = bool(
-        _llm_runtime.get("api_key")
-        or os.getenv("AUTOHOTKEY_LLM_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-    )
-    # Detect provider from URL
-    provider = "ollama"
-    if "1234" in base or "lmstudio" in base.lower():
-        provider = "lmstudio"
-    elif "openai.com" in base.lower():
-        provider = "openai"
-    return JSONResponse(content={
-        "base_url": base,
-        "model": model,
-        "provider": provider,
-        "timeout": _llm_runtime.get("timeout", DEFAULT_TIMEOUT),
-        "api_key_set": api_key_set,
-    })
-
-
-@app.put("/api/llm/settings")
-async def api_llm_settings_put(request: Request) -> JSONResponse:
-    """SPA: override LLM settings at runtime (not persisted across restarts)."""
-    from autohotkey_mcp.ahk_llm import allowed_llm_base
-    try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse(status_code=400, content={"success": False, "error": "Invalid JSON"})
-    if not isinstance(body, dict):
-        return JSONResponse(status_code=400, content={"success": False, "error": "Body must be an object"})
-    updated: dict[str, Any] = {}
-    if "base_url" in body:
-        url = str(body["base_url"]).rstrip("/")
-        if not allowed_llm_base(url):
-            return JSONResponse(status_code=400, content={
-                "success": False,
-                "error": "base_url must be localhost/127.0.0.1/::1 for SSRF safety"
-            })
-        _llm_runtime["base_url"] = url
-        updated["base_url"] = url
-    if "model" in body:
-        m = str(body["model"]).strip()
-        if m:
-            _llm_runtime["model"] = m
-            updated["model"] = m
-    if "api_key" in body:
-        k = str(body["api_key"]).strip()
-        _llm_runtime["api_key"] = k
-        updated["api_key_set"] = bool(k)
-    if "timeout" in body:
-        try:
-            t = float(body["timeout"])
-            _llm_runtime["timeout"] = t
-            updated["timeout"] = t
-        except (TypeError, ValueError):
-            pass
-    # Patch ahk_llm module globals so current process uses them immediately
-    import autohotkey_mcp.ahk_llm as _llm_mod
-    if "base_url" in updated:
-        _llm_mod.DEFAULT_BASE = updated["base_url"]
-    if "model" in updated:
-        _llm_mod.DEFAULT_MODEL = updated["model"]
-    if "timeout" in updated:
-        _llm_mod.DEFAULT_TIMEOUT = updated["timeout"]
-    return JSONResponse(content={"success": True, "updated": updated})
-
-
-@app.get("/api/llm/models")
-async def api_llm_models() -> JSONResponse:
-    """SPA: fetch model list from the configured provider (Ollama /api/tags, OpenAI /models)."""
-    from autohotkey_mcp.ahk_llm import DEFAULT_BASE, allowed_llm_base
-    base = _llm_runtime.get("base_url", DEFAULT_BASE).rstrip("/")
-    if not allowed_llm_base(base):
-        return JSONResponse(status_code=400, content={"success": False, "models": [], "error": "Invalid base_url"})
-    headers: dict[str, str] = {}
-    api_key = _llm_runtime.get("api_key") or os.getenv("AUTOHOTKEY_LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-    models: list[str] = []
-    errors: list[str] = []
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        # Ollama: GET /api/tags  →  {"models": [{"name": "..."}, ...]}
-        try:
-            # strip /v1 suffix if present to get Ollama root
-            ollama_base = base.rstrip("/v1").rstrip("/")
-            if not ollama_base.endswith("/v1"):
-                r = await client.get(f"{ollama_base}/api/tags", headers=headers)
-                if r.status_code == 200:
-                    data = r.json()
-                    for m in data.get("models") or []:
-                        name = m.get("name") or m.get("model")
-                        if name and name not in models:
-                            models.append(name)
-        except Exception as e:
-            errors.append(f"ollama: {e}")
-        # OpenAI-compat: GET {base}/models  →  {"data": [{"id": "..."}, ...]}
-        if not models:
-            try:
-                r = await client.get(f"{base}/models", headers=headers)
-                if r.status_code == 200:
-                    data = r.json()
-                    for m in (data.get("data") or []):
-                        mid = m.get("id") or m.get("name")
-                        if mid and mid not in models:
-                            models.append(mid)
-            except Exception as e:
-                errors.append(f"openai-compat: {e}")
-    models.sort()
-    return JSONResponse(content={
-        "success": bool(models),
-        "models": models,
-        "base_url": base,
-        "errors": errors if not models else [],
-    })
-
-
-
+@app.get("/api/running")
 async def api_running() -> JSONResponse:
     """SPA: running scriptlets — PIDs (direct), bridge rows, hotkeys/description from depot headers."""
     data = await get_running_overview()
@@ -415,51 +289,7 @@ async def api_stop_scriptlet(request: Request) -> JSONResponse:
     )
 
 
-@app.get("/api/scriptlet/{script_id}")
-async def api_scriptlet_detail(script_id: str) -> JSONResponse:
-    """SPA: source + metadata for a single scriptlet."""
-    from autohotkey_mcp.tools.scriptlets import _read_metadata, _depot_path
-    sid = script_id.strip().removesuffix(".ahk")
-    path = _depot_path(sid)
-    if not path.exists():
-        return JSONResponse(status_code=404, content={"found": False, "script_id": sid})
-    meta = _read_metadata(path)
-    source = path.read_text(encoding="utf-8", errors="replace")
-    return JSONResponse(content={
-        "found": True,
-        "script_id": sid,
-        "path": str(path),
-        "metadata": meta,
-        "source": source,
-    })
-
-
-@app.post("/api/run_scriptlet")
-async def api_run_scriptlet(request: Request) -> JSONResponse:
-    """SPA: run a scriptlet by id."""
-    try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse(status_code=400, content={"success": False, "error": "Invalid JSON"})
-    script_id = body.get("script_id") if isinstance(body, dict) else None
-    if not isinstance(script_id, str) or not script_id.strip():
-        return JSONResponse(status_code=400, content={"success": False, "error": "Missing script_id"})
-    try:
-        result = await mcp.call_tool("run_scriptlet", {"script_id": script_id.strip()})
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
-    if hasattr(result, "structured_content") and result.structured_content is not None:
-        data = result.structured_content
-    elif hasattr(result, "content") and result.content:
-        raw = result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            data = {"raw": raw}
-    else:
-        data = {"result": str(result)}
-    ok = isinstance(data, dict) and data.get("success") is True
-    return JSONResponse(status_code=200 if ok else 422, content=data if isinstance(data, dict) else {"error": data})
+@app.get("/status")
 async def status() -> dict[str, Any]:
     """Hub and proxy: GET /status."""
     try:

@@ -33,9 +33,6 @@ HOST = os.getenv("HOST", "127.0.0.1")
 _DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
 _AI_GENERATED = _DEPOT / "scriptlets" / "ai_generated"
 
-# Runtime LLM overrides — set via PUT /api/llm/settings, not persisted across restarts
-_llm_runtime: dict[str, Any] = {}
-
 mcp = FastMCP("autohotkey-mcp")
 register_scriptlet_tools(mcp)
 register_prefab_tools(mcp)
