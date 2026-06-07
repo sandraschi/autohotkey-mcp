@@ -1,11 +1,11 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 # AutoHotkey MCP – just recipes
 # Usage: just <recipe>   or   just --list
 
 # Open the interactive recipe dashboard in the browser
 default:
-    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
+    @just --list
 
 stats:
     uv run python tools/repo_stats.py
@@ -49,3 +49,4 @@ clean:
 # Backend health check (requires server running)
 health:
     curl -s http://127.0.0.1:10746/health
+
