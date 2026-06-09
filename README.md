@@ -94,7 +94,17 @@ Or: `just run` / `just server`.
 
 ## Related MCP servers
 
-- **[pywinauto-mcp](https://github.com/sandraschi/pywinauto-mcp)** — **Native Windows UI** via PyWinAuto: **UI Automation** / window and **element** tools, mouse/keyboard portmanteau, screenshots/OCR, optional web dashboard. Use when the agent should **inspect controls and drive apps** through structured MCP calls. **Not** an AHK script manager; **this repo** is not a UIA tree server. **Overlap:** both are **high-trust** desktop session tools — read **SAFETY** in each repo. **Together:** install both when workflows combine **AHK scriptlets** (here) with **per-control UI automation** (pywinauto-mcp). See pywinauto-mcp README — *Complementary: autohotkey-mcp*.
+| Tool | What it does | When to use |
+|------|-------------|-------------|
+| **[autohotkey-mcp]** (this) | AHK scriptlet manager — list, run, stop, generate `.ahk` scripts | You have a **depot of AHK scripts** and want to fire them from chat. Best for **legacy automation**, **raw input recording/replay**, **low-level mouse/keyboard macros**, and apps that don't expose UIA. |
+| **[pywinauto-mcp]** | Native Windows GUI automation — UIA element tree, screenshots, OCR, mouse/keyboard portmanteau | You need to **inspect controls, click buttons, read text** from modern Windows apps with accessibility trees. Best for **structured UI automation** where element IDs exist. |
+
+**Overlap:** both control Windows input. **Use AHK** for raw low-level recording/replay (use `autohotkey-test`'s built-in recorder). **Use pywinauto** when you need UIA element tree access, OCR, or structured window state capture.
+
+**Together:** you can run both. `autohotkey-mcp` throws up a **"CUA at work" HUD** (blinking red overlay + e-stop button) while any scriptlet is running.
+
+[autohotkey-mcp]: https://github.com/sandraschi/autohotkey-mcp
+[pywinauto-mcp]: https://github.com/sandraschi/pywinauto-mcp
 
 ## Fleet
 

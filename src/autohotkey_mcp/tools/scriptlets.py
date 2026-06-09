@@ -1,5 +1,9 @@
 """Scriptlet tools: list, run, stop, get source/metadata, optional generate (sandbox), ahk_help, show_help.
 Uses ScriptletCOMBridge when available; falls back to direct depot scan + subprocess run/stop with PID tracking.
+
+Shows a "CUA at work" HUD overlay while scriptlets are running.
+Cross-connected with pywinauto-mcp: use AHK for low-level input recording/replay;
+use pywinauto-mcp for UIA-based GUI automation (elements, OCR, screenshots).
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from fastmcp.server.dependencies import OptionalCurrentContext
 from autohotkey_mcp import help_content
 from autohotkey_mcp import personas as personas_mod
 from autohotkey_mcp import prompt_catalog
+from autohotkey_mcp.cua_hud import CuaHUD
 from autohotkey_mcp.prompt_refine import refine_generation_prompt
 from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
 
@@ -30,6 +35,18 @@ AI_GENERATED_DIR = SCRIPTLETS_DIR / "ai_generated"
 
 # In-memory instances when using direct run (no bridge). Multiple launches of the same script = multiple rows.
 _running_instances: list[dict[str, Any]] = []
+# HUD overlay for "CUA at work" indicator while scriptlets are running.
+_hud: CuaHUD | None = None
+
+
+def _maybe_stop_hud():
+    """Stop HUD if no running scriptlets remain."""
+    global _hud
+    if not _hud:
+        return
+    if not _running_instances:
+        _hud.stop()
+        _hud = None
 
 
 def _pid_is_alive(pid: int) -> bool:
@@ -268,6 +285,10 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         script_id = script_id.strip().removesuffix(".ahk")
         try:
             out = await _bridge_get_text(f"/run/{script_id}.ahk")
+            global _hud
+            if not _hud:
+                _hud = CuaHUD()
+                _hud.start()
             return {"success": True, "message": out, "script_id": script_id, "source": "bridge"}
         except httpx.RequestError:
             pass
@@ -290,6 +311,10 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
                 cwd=str(path.parent),
             )
             _running_instances.append({"script_id": script_id, "pid": proc.pid, "source": "direct"})
+            global _hud
+            if not _hud:
+                _hud = CuaHUD()
+                _hud.start()
             return {
                 "success": True,
                 "message": "Started (direct)",
@@ -322,6 +347,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
                     killed.append(int(t["pid"]))
             dead = set(killed)
             _running_instances = [i for i in _running_instances if int(i["pid"]) not in dead]
+            _maybe_stop_hud()
             return {
                 "success": len(killed) > 0,
                 "message": f"Stopped PID(s): {killed}" if killed else "Kill failed",
@@ -331,6 +357,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             }
         try:
             out = await _bridge_get_text(f"/stop/{script_id}.ahk")
+            _maybe_stop_hud()
             return {"success": True, "message": out, "script_id": script_id, "source": "bridge"}
         except httpx.RequestError:
             pass

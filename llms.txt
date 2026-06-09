@@ -4,6 +4,14 @@ MCP server for AutoHotkey v2 scriptlet management. List, run, stop, and inspect
 AHK scripts from any MCP host. AI generation via FastMCP sampling (Cursor/Claude)
 or local HTTP (Ollama/LM Studio). Fleet-standard web dashboard on 10746/10747.
 
+Shows a "CUA at work" blinking red HUD while scriptlets are running.
+
+## Related
+
+| Tool | Use for |
+|------|---------|
+| **[pywinauto-mcp](https://github.com/sandraschi/pywinauto-mcp)** | UIA element tree, OCR, structured GUI automation. Use this for modern apps with accessibility trees. Use autohotkey-mcp for low-level recording/replay. |
+
 ## Docs
 
 - [README](README.md)

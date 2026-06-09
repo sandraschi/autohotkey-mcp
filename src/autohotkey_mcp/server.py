@@ -240,7 +240,7 @@ async def api_refine_prompt(request: Request) -> JSONResponse:
 @app.get("/api/llm/settings")
 async def api_llm_settings() -> JSONResponse:
     """SPA: current LLM provider settings (read from env / runtime overrides)."""
-    from autohotkey_mcp.ahk_llm import DEFAULT_BASE, DEFAULT_MODEL, DEFAULT_TIMEOUT, allowed_llm_base
+    from autohotkey_mcp.ahk_llm import DEFAULT_BASE, DEFAULT_MODEL, DEFAULT_TIMEOUT
     base = _llm_runtime.get("base_url", DEFAULT_BASE)
     model = _llm_runtime.get("model", DEFAULT_MODEL)
     api_key_set = bool(

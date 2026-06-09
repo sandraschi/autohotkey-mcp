@@ -1181,11 +1181,18 @@ from disk — they do not go through the bridge.
 
 ## Related Servers
 
-| Server | Relation |
-|--------|----------|
-| `pywinauto-mcp` (10788/10789) | Native Windows UI automation via UIA tree; complements AHK for per-control interaction |
-| `windows-operations-mcp` (10748/10749) | PowerShell + system management |
-| `robofang` (10870-10872) | Fleet supervisor — can orchestrate autohotkey-mcp via `/tool` bridge |
+| Tool | What it does | When to pick this one |
+|------|-------------|----------------------|
+| **autohotkey-mcp** (here — 10746/10747) | AHK scriptlet depot — list, run, stop, generate `.ahk` scripts. Shows "CUA at work" HUD while scriptlets run. | You have a **depot of AHK scripts** or need **raw low-level recording/replay** via AHK's built-in recorder. Best for legacy apps, games, or custom hotkey macros. |
+| **pywinauto-mcp** (10788/10789) | Native Windows UI automation via UIA element tree + OCR + screenshots. Shows "CUA at work" HUD during `analyze_winapp` and `global_keylogger`. | You need to **inspect controls, click buttons, read text** from modern Windows apps. Best when the app exposes a UIA accessibility tree. |
+| **windows-operations-mcp** (10748/10749) | PowerShell + system management | You need OS-level operations (processes, registry, files). |
+| **robofang** (10870-10872) | Fleet supervisor — can orchestrate autohotkey-mcp via `/tool` bridge | You want scheduled / event-driven AHK script execution. |
+
+**How to choose:**
+- Need to **record mouse/keyboard and replay**? → AHK's built-in recorder + `autohotkey-mcp run_scriptlet`
+- Need to **read text from a window, click a button by its automation ID**? → `pywinauto-mcp automation_elements`
+- Need to **crawl an unknown app's UI tree**? → `pywinauto-mcp analyze_winapp`
+- Both show a **"CUA at work"** HUD (blinking red overlay + e-stop button) during operations so you know when automation is active.
 """
 
 # ─────────────────────────────────────────────────────────────────────────────

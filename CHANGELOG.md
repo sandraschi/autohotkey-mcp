@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`CuaHUD` overlay** — "CUA at work" blinking red HUD + e-stop button shown while any scriptlet is running via `run_scriptlet`. Automatically hidden when last scriptlet stops.
+- **Cross-connection docs** — README table comparing autohotkey-mcp vs pywinauto-mcp with "when to use" guidance. Help content (`help_content.py`) updated with decision matrix.
+- **`cua_hud.py`** — shared module (same implementation as pywinauto-mcp) for always-on-top automation indicator.
+
 - **generate_scriptlet:** Real AHK v2 generation — **FastMCP sampling primary**, localhost HTTP fallback; validation + one repair pass; no file on failure.
 - **list_generation_prompts** / **refine_ahk_prompt** MCP tools; preset prompt library (`prompt_catalog`).
 - **Web SPA:** **Chat** page (personas, preset prompts, refine → Scriptlets), **Running** page (`GET /api/running`, `POST /api/stop_scriptlet`) — hotkeys, description, kill; multi-instance direct PIDs tracked.
