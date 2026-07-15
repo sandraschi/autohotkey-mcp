@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { FileCode, Loader2, Search, Sparkles } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 
 interface ScriptletInfo {
   name?: string;
@@ -41,11 +42,35 @@ export function Scriptlets() {
   const [genResult, setGenResult] = useState<GenResult | null>(null);
 
   const loadScriptlets = () => {
-    fetch("/api/scriptlets")
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to load scriptlets"))))
-      .then((data) => setScriptlets(Array.isArray(data.scriptlets) ? data.scriptlets : []))
+    setError(null);
+    fetch(API_BASE + "/api/scriptlets")
+      .then(async (r) => {
+        if (r.ok) return r.json();
+        let detail = `HTTP ${r.status}`;
+        try {
+          const body = (await r.json()) as { error?: string };
+          if (body.error) detail = body.error;
+        } catch {
+          /* ignore non-JSON body */
+        }
+        throw new Error(detail);
+      })
+      .then((data) => {
+        const list = Array.isArray(data.scriptlets) ? data.scriptlets : [];
+        setScriptlets(list);
+        if (list.length === 0) {
+          setError(
+            "No scriptlets in depot. Start ScriptletCOMBridge (10744) or check AUTOHOTKEY_SCRIPT_DEPOT."
+          );
+        }
+      })
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Unknown error");
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        setError(
+          msg.includes("Failed to fetch") || msg.startsWith("HTTP 5")
+            ? "Backend unreachable on port 10746. Run web_sota/start.ps1 or: uv run python -m autohotkey_mcp.server --serve"
+            : msg
+        );
         setScriptlets([]);
       });
   };
@@ -75,7 +100,7 @@ export function Scriptlets() {
       const body: Record<string, string> = { prompt };
       const fn = genFilename.trim();
       if (fn) body.filename = fn;
-      const r = await fetch("/api/generate_scriptlet", {
+      const r = await fetch(API_BASE + "/api/generate_scriptlet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -138,9 +163,14 @@ export function Scriptlets() {
           <FileCode className="h-7 w-7 text-amber-500" />
           Scriptlets
         </h1>
-        <p className="text-amber-400">
-          Backend unreachable or no scriptlets. Ensure bridge (10744) and backend are running.
-        </p>
+        <p className="text-amber-400">{error}</p>
+        <button
+          type="button"
+          onClick={loadScriptlets}
+          className="rounded bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-600"
+        >
+          Retry
+        </button>
       </div>
     );
   }

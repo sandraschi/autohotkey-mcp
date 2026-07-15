@@ -25,7 +25,11 @@ from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
 from autohotkey_mcp.prompt_resources import register_prompt_resources
 from autohotkey_mcp.prompts import register_prompts
 from autohotkey_mcp.providers import register_providers
-from autohotkey_mcp.tools import register_scriptlet_tools, register_prefab_tools
+from autohotkey_mcp.tools import (
+    register_macro_tools,
+    register_scriptlet_tools,
+    register_prefab_tools,
+)
 from autohotkey_mcp.tools.scriptlets import get_running_overview
 
 PORT = int(os.getenv("PORT", "10746"))
@@ -37,6 +41,7 @@ _AI_GENERATED = _DEPOT / "scriptlets" / "ai_generated"
 _llm_runtime: dict[str, Any] = {}
 
 mcp = FastMCP("autohotkey-mcp")
+register_macro_tools(mcp)
 register_scriptlet_tools(mcp)
 register_prefab_tools(mcp)
 register_prompt_resources(mcp)
@@ -241,6 +246,7 @@ async def api_refine_prompt(request: Request) -> JSONResponse:
 async def api_llm_settings() -> JSONResponse:
     """SPA: current LLM provider settings (read from env / runtime overrides)."""
     from autohotkey_mcp.ahk_llm import DEFAULT_BASE, DEFAULT_MODEL, DEFAULT_TIMEOUT
+
     base = _llm_runtime.get("base_url", DEFAULT_BASE)
     model = _llm_runtime.get("model", DEFAULT_MODEL)
     api_key_set = bool(
@@ -254,33 +260,41 @@ async def api_llm_settings() -> JSONResponse:
         provider = "lmstudio"
     elif "openai.com" in base.lower():
         provider = "openai"
-    return JSONResponse(content={
-        "base_url": base,
-        "model": model,
-        "provider": provider,
-        "timeout": _llm_runtime.get("timeout", DEFAULT_TIMEOUT),
-        "api_key_set": api_key_set,
-    })
+    return JSONResponse(
+        content={
+            "base_url": base,
+            "model": model,
+            "provider": provider,
+            "timeout": _llm_runtime.get("timeout", DEFAULT_TIMEOUT),
+            "api_key_set": api_key_set,
+        }
+    )
 
 
 @app.put("/api/llm/settings")
 async def api_llm_settings_put(request: Request) -> JSONResponse:
     """SPA: override LLM settings at runtime (not persisted across restarts)."""
     from autohotkey_mcp.ahk_llm import allowed_llm_base
+
     try:
         body = await request.json()
     except Exception:
         return JSONResponse(status_code=400, content={"success": False, "error": "Invalid JSON"})
     if not isinstance(body, dict):
-        return JSONResponse(status_code=400, content={"success": False, "error": "Body must be an object"})
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Body must be an object"}
+        )
     updated: dict[str, Any] = {}
     if "base_url" in body:
         url = str(body["base_url"]).rstrip("/")
         if not allowed_llm_base(url):
-            return JSONResponse(status_code=400, content={
-                "success": False,
-                "error": "base_url must be localhost/127.0.0.1/::1 for SSRF safety"
-            })
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "base_url must be localhost/127.0.0.1/::1 for SSRF safety",
+                },
+            )
         _llm_runtime["base_url"] = url
         updated["base_url"] = url
     if "model" in body:
@@ -301,6 +315,7 @@ async def api_llm_settings_put(request: Request) -> JSONResponse:
             pass
     # Patch ahk_llm module globals so current process uses them immediately
     import autohotkey_mcp.ahk_llm as _llm_mod
+
     if "base_url" in updated:
         _llm_mod.DEFAULT_BASE = updated["base_url"]
     if "model" in updated:
@@ -310,15 +325,84 @@ async def api_llm_settings_put(request: Request) -> JSONResponse:
     return JSONResponse(content={"success": True, "updated": updated})
 
 
+@app.get("/api/llm/providers")
+async def api_llm_providers() -> JSONResponse:
+    """SPA: probe available LLM providers (Ollama, LM Studio) and return their model lists."""
+    providers: list[dict[str, Any]] = []
+
+    # Probe Ollama
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get("http://127.0.0.1:11434/api/tags")
+            if resp.status_code == 200:
+                data = resp.json()
+                models = [m["name"] for m in data.get("models", [])]
+                providers.append(
+                    {
+                        "id": "ollama",
+                        "label": "Ollama",
+                        "base_url": "http://127.0.0.1:11434/v1",
+                        "models": models,
+                        "needs_key": False,
+                    }
+                )
+    except Exception:
+        providers.append(
+            {
+                "id": "ollama",
+                "label": "Ollama",
+                "base_url": "http://127.0.0.1:11434/v1",
+                "models": [],
+                "needs_key": False,
+            }
+        )
+
+    # Probe LM Studio
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get("http://127.0.0.1:1234/v1/models")
+            if resp.status_code == 200:
+                data = resp.json()
+                models = [m["id"] for m in data.get("data", [])]
+                providers.append(
+                    {
+                        "id": "lmstudio",
+                        "label": "LM Studio",
+                        "base_url": "http://127.0.0.1:1234/v1",
+                        "models": models,
+                        "needs_key": False,
+                    }
+                )
+    except Exception:
+        providers.append(
+            {
+                "id": "lmstudio",
+                "label": "LM Studio",
+                "base_url": "http://127.0.0.1:1234/v1",
+                "models": [],
+                "needs_key": False,
+            }
+        )
+
+    return JSONResponse(content={"providers": providers})
+
+
 @app.get("/api/llm/models")
 async def api_llm_models() -> JSONResponse:
     """SPA: fetch model list from the configured provider (Ollama /api/tags, OpenAI /models)."""
     from autohotkey_mcp.ahk_llm import DEFAULT_BASE, allowed_llm_base
+
     base = _llm_runtime.get("base_url", DEFAULT_BASE).rstrip("/")
     if not allowed_llm_base(base):
-        return JSONResponse(status_code=400, content={"success": False, "models": [], "error": "Invalid base_url"})
+        return JSONResponse(
+            status_code=400, content={"success": False, "models": [], "error": "Invalid base_url"}
+        )
     headers: dict[str, str] = {}
-    api_key = _llm_runtime.get("api_key") or os.getenv("AUTOHOTKEY_LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+    api_key = (
+        _llm_runtime.get("api_key")
+        or os.getenv("AUTOHOTKEY_LLM_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+    )
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     models: list[str] = []
@@ -344,20 +428,21 @@ async def api_llm_models() -> JSONResponse:
                 r = await client.get(f"{base}/models", headers=headers)
                 if r.status_code == 200:
                     data = r.json()
-                    for m in (data.get("data") or []):
+                    for m in data.get("data") or []:
                         mid = m.get("id") or m.get("name")
                         if mid and mid not in models:
                             models.append(mid)
             except Exception as e:
                 errors.append(f"openai-compat: {e}")
     models.sort()
-    return JSONResponse(content={
-        "success": bool(models),
-        "models": models,
-        "base_url": base,
-        "errors": errors if not models else [],
-    })
-
+    return JSONResponse(
+        content={
+            "success": bool(models),
+            "models": models,
+            "base_url": base,
+            "errors": errors if not models else [],
+        }
+    )
 
 
 async def api_running() -> JSONResponse:
@@ -419,19 +504,22 @@ async def api_stop_scriptlet(request: Request) -> JSONResponse:
 async def api_scriptlet_detail(script_id: str) -> JSONResponse:
     """SPA: source + metadata for a single scriptlet."""
     from autohotkey_mcp.tools.scriptlets import _read_metadata, _depot_path
+
     sid = script_id.strip().removesuffix(".ahk")
     path = _depot_path(sid)
     if not path.exists():
         return JSONResponse(status_code=404, content={"found": False, "script_id": sid})
     meta = _read_metadata(path)
     source = path.read_text(encoding="utf-8", errors="replace")
-    return JSONResponse(content={
-        "found": True,
-        "script_id": sid,
-        "path": str(path),
-        "metadata": meta,
-        "source": source,
-    })
+    return JSONResponse(
+        content={
+            "found": True,
+            "script_id": sid,
+            "path": str(path),
+            "metadata": meta,
+            "source": source,
+        }
+    )
 
 
 @app.post("/api/run_scriptlet")
@@ -443,7 +531,9 @@ async def api_run_scriptlet(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"success": False, "error": "Invalid JSON"})
     script_id = body.get("script_id") if isinstance(body, dict) else None
     if not isinstance(script_id, str) or not script_id.strip():
-        return JSONResponse(status_code=400, content={"success": False, "error": "Missing script_id"})
+        return JSONResponse(
+            status_code=400, content={"success": False, "error": "Missing script_id"}
+        )
     try:
         result = await mcp.call_tool("run_scriptlet", {"script_id": script_id.strip()})
     except Exception as e:
@@ -451,7 +541,9 @@ async def api_run_scriptlet(request: Request) -> JSONResponse:
     if hasattr(result, "structured_content") and result.structured_content is not None:
         data = result.structured_content
     elif hasattr(result, "content") and result.content:
-        raw = result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+        raw = (
+            result.content[0].text if hasattr(result.content[0], "text") else str(result.content[0])
+        )
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
@@ -459,7 +551,11 @@ async def api_run_scriptlet(request: Request) -> JSONResponse:
     else:
         data = {"result": str(result)}
     ok = isinstance(data, dict) and data.get("success") is True
-    return JSONResponse(status_code=200 if ok else 422, content=data if isinstance(data, dict) else {"error": data})
+    return JSONResponse(
+        status_code=200 if ok else 422, content=data if isinstance(data, dict) else {"error": data}
+    )
+
+
 async def status() -> dict[str, Any]:
     """Hub and proxy: GET /status."""
     try:
@@ -592,15 +688,37 @@ async def tool(request: Request) -> JSONResponse:
 
 
 def main() -> None:
+    import argparse
     import asyncio
+
     import uvicorn
 
-    # Cursor/IDE run with stdin as a pipe (not a TTY). Run stdio-only then to avoid port bind
-    # (10746 already in use) and dual-transport hangs. Explicit AUTOHOTKEY_MCP_HTTP=0 also forces stdio-only.
-    force_stdio = os.getenv("AUTOHOTKEY_MCP_HTTP", "").lower() in ("0", "false", "no")
-    stdio_only = force_stdio or not sys.stdin.isatty()
+    parser = argparse.ArgumentParser(description="autohotkey-mcp (FastMCP 3.2)")
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="Run HTTP-only on PORT (web_sota launcher; no stdio MCP)",
+    )
+    parser.add_argument(
+        "--stdio",
+        action="store_true",
+        help="Force MCP stdio-only (Cursor/Claude Desktop)",
+    )
+    args = parser.parse_args()
 
-    if stdio_only:
+    force_stdio = os.getenv("AUTOHOTKEY_MCP_HTTP", "").lower() in ("0", "false", "no")
+    force_http = os.getenv("AUTOHOTKEY_MCP_HTTP", "").lower() in ("1", "true", "yes")
+
+    if args.serve and args.stdio:
+        parser.error("Choose either --serve or --stdio, not both.")
+
+    # web_sota/start.ps1 and AUTOHOTKEY_MCP_HTTP=1: bind REST API without stdio.
+    if args.serve or force_http:
+        uvicorn.run(app, host=HOST, port=PORT, log_level="info")
+        return
+
+    # Cursor/IDE: stdin is a pipe (not a TTY). Run stdio-only to avoid port bind conflicts.
+    if args.stdio or force_stdio or not sys.stdin.isatty():
         asyncio.run(mcp.run_stdio_async())
         return
 

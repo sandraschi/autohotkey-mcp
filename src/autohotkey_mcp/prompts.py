@@ -83,7 +83,9 @@ Output only the refined prompt text — concise, specific, ready to pass to gene
         Diagnose and fix an AutoHotkey v2 script. Provide source and optional error message.
         Returns corrected source with inline comments explaining each fix.
         """
-        error_section = f"\n\n**Error reported:**\n```\n{error_message}\n```" if error_message else ""
+        error_section = (
+            f"\n\n**Error reported:**\n```\n{error_message}\n```" if error_message else ""
+        )
         return f"""You are an AutoHotkey v2 expert debugging a script.{error_section}
 
 **Script to debug:**

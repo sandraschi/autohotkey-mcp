@@ -123,8 +123,10 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         """
         try:
             data = await _bridge_get("/scriptlets")
-            raw = data if isinstance(data, list) else (
-                data.get("scriptlets", []) if isinstance(data, dict) else []
+            raw = (
+                data
+                if isinstance(data, list)
+                else (data.get("scriptlets", []) if isinstance(data, dict) else [])
             )
             items = _enrich_scriptlet_categories(raw if isinstance(raw, list) else [])
             source = "bridge"
@@ -139,18 +141,20 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         for s in items:
             plain += (
                 f"{_plain_dot(bool(s.get('running')))}"
-                f"{s.get('id','?')}  [{s.get('category','general')}]  "
+                f"{s.get('id', '?')}  [{s.get('category', 'general')}]  "
                 f"{(s.get('description') or '')[:70]}\n"
             )
 
         rows: list[dict[str, Any]] = []
         for s in items:
-            rows.append({
-                "status": _status_dot(bool(s.get("running"))),
-                "id": s.get("id") or "?",
-                "category": _cat_badge(s.get("category") or "general"),
-                "description": (s.get("description") or "")[:90],
-            })
+            rows.append(
+                {
+                    "status": _status_dot(bool(s.get("running"))),
+                    "id": s.get("id") or "?",
+                    "category": _cat_badge(s.get("category") or "general"),
+                    "description": (s.get("description") or "")[:90],
+                }
+            )
 
         with Column(gap=2) as view:
             with Card(css_class="w-full"):
@@ -165,7 +169,9 @@ def register_prefab_tools(mcp: FastMCP) -> None:
                         columns=[
                             DataTableColumn(key="status", header="", width="44px"),
                             DataTableColumn(key="id", header="ID", sortable=True),
-                            DataTableColumn(key="category", header="Category", sortable=True, width="130px"),
+                            DataTableColumn(
+                                key="category", header="Category", sortable=True, width="130px"
+                            ),
                             DataTableColumn(key="description", header="Description"),
                         ],
                         rows=rows,
@@ -202,9 +208,9 @@ def register_prefab_tools(mcp: FastMCP) -> None:
             for inst in instances:
                 pid_str = f" PID {inst['pid']}" if inst.get("pid") else ""
                 lines.append(
-                    f"● {inst.get('script_id','?')}{pid_str}"
-                    f"  [{inst.get('source','?')}]"
-                    f"  {inst.get('hotkeys','')}"
+                    f"● {inst.get('script_id', '?')}{pid_str}"
+                    f"  [{inst.get('source', '?')}]"
+                    f"  {inst.get('hotkeys', '')}"
                     f"  {(inst.get('description') or '')[:60]}"
                 )
             plain = "\n".join(lines)
@@ -212,13 +218,15 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         rows: list[dict[str, Any]] = []
         for inst in instances:
             src = inst.get("source") or "?"
-            rows.append({
-                "script_id": inst.get("script_id") or "?",
-                "pid": str(inst["pid"]) if inst.get("pid") else "—",
-                "source": Badge(src, variant="info" if src == "bridge" else "default"),
-                "hotkeys": inst.get("hotkeys") or "",
-                "description": (inst.get("description") or "")[:80],
-            })
+            rows.append(
+                {
+                    "script_id": inst.get("script_id") or "?",
+                    "pid": str(inst["pid"]) if inst.get("pid") else "—",
+                    "source": Badge(src, variant="info" if src == "bridge" else "default"),
+                    "hotkeys": inst.get("hotkeys") or "",
+                    "description": (inst.get("description") or "")[:80],
+                }
+            )
 
         with Column(gap=3) as view:
             # KPI row
@@ -242,7 +250,9 @@ def register_prefab_tools(mcp: FastMCP) -> None:
                         DataTable(
                             columns=[
                                 DataTableColumn(key="script_id", header="Script ID", sortable=True),
-                                DataTableColumn(key="pid", header="PID", width="80px", align="right"),
+                                DataTableColumn(
+                                    key="pid", header="PID", width="80px", align="right"
+                                ),
                                 DataTableColumn(key="source", header="Source", width="100px"),
                                 DataTableColumn(key="hotkeys", header="Hotkeys", width="150px"),
                                 DataTableColumn(key="description", header="Description"),
@@ -305,7 +315,9 @@ def register_prefab_tools(mcp: FastMCP) -> None:
             with Card() as view:
                 with CardContent():
                     Text(plain)
-            return ToolResult(content=plain, structured_content=PrefabApp(view=view, title="Not Found"))
+            return ToolResult(
+                content=plain, structured_content=PrefabApp(view=view, title="Not Found")
+            )
 
         meta = _read_metadata(path)
         source = path.read_text(encoding="utf-8", errors="replace")
@@ -316,7 +328,8 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         hotkeys_raw = meta.get("hotkeys") or meta.get("hotkey") or ""
         hotkeys = [h.strip() for h in hotkeys_raw.replace(",", " ").split() if h.strip()]
         extra_meta = {
-            k: v for k, v in meta.items()
+            k: v
+            for k, v in meta.items()
             if k not in ("hotkeys", "hotkey", "name", "description", "category", "version")
         }
 
@@ -382,7 +395,9 @@ def register_prefab_tools(mcp: FastMCP) -> None:
             with Card() as view:
                 with CardContent():
                     Text(plain)
-            return ToolResult(content=plain, structured_content=PrefabApp(view=view, title="Not Found"))
+            return ToolResult(
+                content=plain, structured_content=PrefabApp(view=view, title="Not Found")
+            )
 
         meta = _read_metadata(path)
         source = path.read_text(encoding="utf-8", errors="replace")

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 
 const LEVEL_ORDER = ["quick", "reference", "language", "usage", "tools", "mcp_server"];
 const LEVEL_LABELS: Record<string, string> = {
@@ -142,7 +143,7 @@ export function Help() {
   const [active, setActive] = useState("quick");
 
   useEffect(() => {
-    fetch("/api/help")
+    fetch(API_BASE + "/api/help")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data) => {
         setLevels(data.levels ?? {});

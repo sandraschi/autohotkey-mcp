@@ -1,4 +1,5 @@
-﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+import 'scripts/just/fleet.just'
 
 # AutoHotkey MCP – just recipes
 # Usage: just <recipe>   or   just --list
@@ -10,9 +11,9 @@ default:
 stats:
     uv run python tools/repo_stats.py
 
-# Run backend only (port 10746)
+# Run backend only (port 10746, HTTP REST + mini-help)
 run server:
-    uv run autohotkey-mcp
+    uv run python -m autohotkey_mcp.server --serve
 
 # Lint and format Python
 lint check:
@@ -49,4 +50,3 @@ clean:
 # Backend health check (requires server running)
 health:
     curl -s http://127.0.0.1:10746/health
-

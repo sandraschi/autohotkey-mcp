@@ -11,6 +11,7 @@ MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata, AI ge
 - FastMCP 3.2+ portmanteau tool pattern — tools use `operation` enum param
 - Responses: structured dicts with `success`, `message`, domain-specific fields
 - Dual transport: stdio (Claude Desktop) + HTTP (`MCP_TRANSPORT=http`)
+- **AHK v2 ONLY**: All generated and hand-written scriptlets MUST use AHK v2 syntax per `standards/rules/autohotkey_v2_standard.md`
 - See [mcp-central-docs](https://github.com/sandraschi/mcp-central-docs) for fleet-wide coding standards
 
 ## Key Files

@@ -49,6 +49,14 @@ def _maybe_stop_hud():
         _hud = None
 
 
+def _ensure_hud_started() -> None:
+    """Start HUD overlay if not already running."""
+    global _hud
+    if not _hud:
+        _hud = CuaHUD()
+        _hud.start()
+
+
 def _pid_is_alive(pid: int) -> bool:
     try:
         if os.name != "nt":
@@ -285,10 +293,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         script_id = script_id.strip().removesuffix(".ahk")
         try:
             out = await _bridge_get_text(f"/run/{script_id}.ahk")
-            global _hud
-            if not _hud:
-                _hud = CuaHUD()
-                _hud.start()
+            _ensure_hud_started()
             return {"success": True, "message": out, "script_id": script_id, "source": "bridge"}
         except httpx.RequestError:
             pass
@@ -311,10 +316,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
                 cwd=str(path.parent),
             )
             _running_instances.append({"script_id": script_id, "pid": proc.pid, "source": "direct"})
-            global _hud
-            if not _hud:
-                _hud = CuaHUD()
-                _hud.start()
+            _ensure_hud_started()
             return {
                 "success": True,
                 "message": "Started (direct)",

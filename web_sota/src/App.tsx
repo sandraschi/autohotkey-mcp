@@ -9,6 +9,7 @@ import { Status } from "@/pages/status";
 import { Tools } from "@/pages/tools";
 import { Detail } from "@/pages/detail";
 import { LLMSettings } from "@/pages/settings";
+import Logging from "./pages/Logging";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/status" element={<Status />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/settings" element={<LLMSettings />} />
+          <Route path="/logging" element={<Logging />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>

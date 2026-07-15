@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Layers, Loader2, RefreshCw, Skull } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 
 interface RunningRow {
   script_id: string;
@@ -25,7 +26,7 @@ export function Running() {
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch("/api/running")
+    fetch(API_BASE + "/api/running")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((j: RunningPayload) => {
         setData(j);
@@ -52,7 +53,7 @@ export function Running() {
       if (row.source === "direct" && row.pid != null) {
         body.pid = row.pid;
       }
-      const r = await fetch("/api/stop_scriptlet", {
+      const r = await fetch(API_BASE + "/api/stop_scriptlet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

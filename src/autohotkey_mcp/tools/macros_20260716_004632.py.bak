@@ -1,0 +1,119 @@
+"""MCP tools for AHK macro/SOP management — list, add, reload macros."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from typing import Any
+
+SOP_PATH = Path.home() / "Dev" / "repos" / "autohotkey-test" / "sop" / "macros.md"
+
+
+def _parse_macros() -> list[dict[str, Any]]:
+    """Parse ## name headings and body from the SOP macros file."""
+    if not SOP_PATH.is_file():
+        return []
+    text = SOP_PATH.read_text(encoding="utf-8")
+    macros: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    current_body: list[str] = []
+    for line in text.splitlines():
+        m = re.match(r"^##\s+(\w+)", line)
+        if m:
+            if current:
+                current["body"] = "\n".join(current_body).strip()
+                macros.append(current)
+            current = {"name": m.group(1), "body": ""}
+            current_body = []
+        elif current:
+            current_body.append(line)
+    if current:
+        current["body"] = "\n".join(current_body).strip()
+        macros.append(current)
+    return macros
+
+
+async def macro_list() -> dict[str, Any]:
+    """List all registered macros from the SOP file.
+
+    ## Return Format
+    {"success": bool, "macros": list[{"name": str, "preview": str}], "count": int}
+    """
+    macros = _parse_macros()
+    return {
+        "success": True,
+        "macros": [
+            {
+                "name": m["name"],
+                "preview": m["body"][:120].replace("\n", " ") + ("..." if len(m["body"]) > 120 else ""),
+            }
+            for m in macros
+        ],
+        "count": len(macros),
+    }
+
+
+async def macro_add(name: str, body: str) -> dict[str, Any]:
+    """Add a new macro or update an existing one in the SOP file.
+
+    The macro will be available after the next Ctrl+Alt+R reload in
+    macro_expander.ahk.  ``macro_reload`` not needed — just save and
+    the AHK watcher picks it up.
+
+    ## Return Format
+    {"success": bool, "name": str, "created": bool}
+    """
+    macros = _parse_macros()
+    existing = [m for m in macros if m["name"] == name]
+    created = len(existing) == 0
+
+    # Build the new entry text
+    entry = f"\n## {name}\n{body.strip()}\n"
+
+    if existing:
+        # Replace in-place
+        text = SOP_PATH.read_text(encoding="utf-8")
+        old = f"## {name}\n{existing[0]['body']}"
+        text = text.replace(old, f"## {name}\n{body.strip()}")
+        SOP_PATH.write_text(text, encoding="utf-8")
+    else:
+        # Append
+        with open(str(SOP_PATH), "a", encoding="utf-8") as f:
+            f.write(entry)
+
+    return {"success": True, "name": name, "created": created, "body": body.strip()}
+
+
+async def macro_delete(name: str) -> dict[str, Any]:
+    """Delete a macro from the SOP file by name.
+
+    ## Return Format
+    {"success": bool, "deleted": bool}
+    """
+    macros = _parse_macros()
+    matching = [m for m in macros if m["name"] == name]
+    if not matching:
+        return {"success": False, "deleted": False, "error": f"Macro '{name}' not found"}
+    text = SOP_PATH.read_text(encoding="utf-8")
+    old = f"## {name}\n{matching[0]['body']}"
+    text = text.replace(old, "")
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    SOP_PATH.write_text(text, encoding="utf-8")
+    return {"success": True, "deleted": True}
+
+
+def register_macro_tools(mcp) -> None:
+    @mcp.tool(annotations={"readonly": True})
+    async def macro_list() -> dict[str, Any]:
+        """List all registered AHK macro/SOP triggers with previews."""
+        return await macro_list()
+
+    @mcp.tool(annotations={"mutating": True})
+    async def macro_add(name: str, body: str) -> dict[str, Any]:
+        """Add or update a macro/SOP entry. Use ``macro_list`` to see existing names."""
+        return await macro_add(name=name, body=body)
+
+    @mcp.tool(annotations={"mutating": True})
+    async def macro_delete(name: str) -> dict[str, Any]:
+        """Delete a macro/SOP entry by name."""
+        return await macro_delete(name=name)

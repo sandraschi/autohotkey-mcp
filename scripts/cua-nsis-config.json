@@ -1,0 +1,14 @@
+{
+    "product_name": "Autohotkey MCP",
+    "install_dir": "%LOCALAPPDATA%\\Autohotkey MCP",
+    "operator_exe": "autohotkey-mcp-native.exe",
+    "backend_process_names": ["autohotkey-mcp-native", "autohotkey-mcp-backend"],
+    "backend_port": 10700,
+    "health_path": "/api/v1/health",
+    "diagnostics_path": "/api/v1/diagnostics",
+    "feature_smoke_path": "/api/v1/system/info",
+    "window_title_re": "Autohotkey MCP",
+    "nsis_glob": "native/target/release/bundle/nsis/Autohotkey MCP_*_x64-setup.exe",
+    "bridge_ok_text": "REST bridge reachable",
+    "uninstall_registry_filter": "*Autohotkey MCP*"
+}

@@ -1,0 +1,1148 @@
+[
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "quick_notes",
+          "name": "Quick Notes",
+          "description": "Open a quick notepad window with Win+N",
+          "category": "productivity",
+          "running": false
+        }
+      ],
+      "source": "depot"
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "quick_notes"
+    },
+    "output_example": {
+      "success": true,
+      "message": "Started (direct)",
+      "script_id": "quick_notes",
+      "pid": 12345,
+      "source": "direct"
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "window_manager"
+    },
+    "output_example": {
+      "success": true,
+      "message": "Started via bridge",
+      "script_id": "window_manager",
+      "source": "bridge"
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "nonexistent_script"
+    },
+    "output_example": {
+      "success": false,
+      "error": "Script not found: d:/dev/repos/autohotkey-test/scriptlets/nonexistent_script.ahk"
+    }
+  },
+  {
+    "tool": "stop_scriptlet",
+    "input": {
+      "script_id": "quick_notes"
+    },
+    "output_example": {
+      "success": true,
+      "message": "Stopped PID(s): [12345]",
+      "script_id": "quick_notes",
+      "pids": [
+        12345
+      ],
+      "source": "direct"
+    }
+  },
+  {
+    "tool": "stop_scriptlet",
+    "input": {
+      "script_id": "quick_notes",
+      "pid": 12345
+    },
+    "output_example": {
+      "success": true,
+      "message": "Stopped PID(s): [12345]",
+      "pids": [
+        12345
+      ]
+    }
+  },
+  {
+    "tool": "stop_scriptlet",
+    "input": {
+      "script_id": "window_manager"
+    },
+    "output_example": {
+      "success": true,
+      "message": "Stopped via bridge",
+      "script_id": "window_manager",
+      "source": "bridge"
+    }
+  },
+  {
+    "tool": "stop_scriptlet",
+    "input": {
+      "script_id": "not_running"
+    },
+    "output_example": {
+      "success": false,
+      "error": "Not running or not tracked"
+    }
+  },
+  {
+    "tool": "list_running_scriptlets",
+    "input": {},
+    "output_example": {
+      "instances": [
+        {
+          "script_id": "quick_notes",
+          "pid": 12345,
+          "source": "direct",
+          "hotkeys": "Win+N",
+          "description": "Quick note taking"
+        }
+      ],
+      "direct_tracked": 1
+    }
+  },
+  {
+    "tool": "get_scriptlet_source",
+    "input": {
+      "script_id": "quick_notes"
+    },
+    "output_example": {
+      "found": true,
+      "script_id": "quick_notes",
+      "path": "d:/dev/repos/autohotkey-test/scriptlets/quick_notes.ahk",
+      "source": "; @name Quick Notes\n; @description Open a quick notepad\n; @hotkeys Win+N\n#Requires AutoHotkey v2.0\n#SingleInstance Force\n\n#n::{\n    MsgBox \"Quick Notes activated\"\n}"
+    }
+  },
+  {
+    "tool": "get_scriptlet_source",
+    "input": {
+      "script_id": "nonexistent"
+    },
+    "output_example": {
+      "found": false,
+      "script_id": "nonexistent",
+      "path": "d:/dev/repos/autohotkey-test/scriptlets/nonexistent.ahk"
+    }
+  },
+  {
+    "tool": "get_scriptlet_metadata",
+    "input": {
+      "script_id": "quick_notes"
+    },
+    "output_example": {
+      "found": true,
+      "script_id": "quick_notes",
+      "metadata": {
+        "name": "Quick Notes",
+        "description": "Open a quick notepad window with Win+N",
+        "hotkeys": "Win+N",
+        "category": "productivity",
+        "version": "1.0.0"
+      }
+    }
+  },
+  {
+    "tool": "get_scriptlet_metadata",
+    "input": {
+      "script_id": "nonexistent"
+    },
+    "output_example": {
+      "found": false,
+      "script_id": "nonexistent",
+      "metadata": {}
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Create a script that shows a message box with Hello World when Win+H is pressed",
+      "filename": "hello_world"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "hello_world",
+      "path": "d:/dev/repos/autohotkey-test/scriptlets/ai_generated/hello_world.ahk",
+      "provider": "sampling"
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Make a clipboard history viewer with Win+V"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "clipboard_history",
+      "provider": "ollama"
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Create a window snapping utility like PowerToys FancyZones"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "window_snapper",
+      "provider": "lm_studio"
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Invalid prompt"
+    },
+    "output_example": {
+      "success": false,
+      "error": "LLM returned no useful script"
+    }
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {
+      "category": "hotkeys"
+    },
+    "output_example": {
+      "prompts": [
+        {
+          "id": "hk_launcher",
+          "title": "Hotkey Launcher",
+          "category": "hotkeys",
+          "tags": [
+            "hotkey",
+            "launcher"
+          ],
+          "prompt": "Create an AutoHotkey v2 script with the following hotkeys..."
+        }
+      ],
+      "categories": [
+        "hotkeys",
+        "gui",
+        "clipboard",
+        "files",
+        "windows",
+        "strings",
+        "system",
+        "productivity",
+        "games",
+        "testing",
+        "network"
+      ]
+    }
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {},
+    "output_example": {
+      "prompts": [
+        {
+          "id": "hk_launcher",
+          "title": "Hotkey Launcher",
+          "category": "hotkeys"
+        },
+        {
+          "id": "gui_dialog",
+          "title": "Custom Dialog",
+          "category": "gui"
+        }
+      ],
+      "categories": [
+        "hotkeys",
+        "gui",
+        "clipboard",
+        "files",
+        "windows",
+        "strings",
+        "system",
+        "productivity",
+        "games",
+        "testing",
+        "network"
+      ]
+    }
+  },
+  {
+    "tool": "refine_ahk_prompt",
+    "input": {
+      "rough": "I want something that helps me type faster"
+    },
+    "output_example": {
+      "success": true,
+      "refined": "Create an AutoHotkey v2 script with text expansion hotstrings...",
+      "provider": "sampling"
+    }
+  },
+  {
+    "tool": "refine_ahk_prompt",
+    "input": {
+      "rough": "Automate my morning routine",
+      "persona_id": "ahk_expert"
+    },
+    "output_example": {
+      "success": true,
+      "refined": "Create an AutoHotkey v2 script that automates morning computer startup routine...",
+      "provider": "ollama"
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "# AutoHotkey MCP Quick Help\n\n## Getting Started\nRun a scriptlet with `run_scriptlet`...",
+      "available_levels": [
+        "quick",
+        "reference",
+        "language",
+        "usage",
+        "tools",
+        "mcp_server"
+      ]
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "tools"
+    },
+    "output_example": {
+      "level": "tools",
+      "content": "# Tool Reference\n\n## list_scriptlets\nList all scriptlets...",
+      "available_levels": [
+        "quick",
+        "reference",
+        "language",
+        "usage",
+        "tools",
+        "mcp_server"
+      ]
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "language",
+      "topic": "hotstrings"
+    },
+    "output_example": {
+      "level": "language",
+      "topic": "hotstrings",
+      "content": "# AHK Hotstrings\n\nHotstrings are triggered by typing specific strings..."
+    }
+  },
+  {
+    "tool": "show_help",
+    "input": {},
+    "output_example": {
+      "mini_help_url": "http://127.0.0.1:10746/help",
+      "full_webapp_url": "http://127.0.0.1:10747/"
+    }
+  },
+  {
+    "tool": "show_scriptlets_card",
+    "input": {},
+    "output_description": "Renders Prefab DataTable of all scriptlets with Dot/Badge"
+  },
+  {
+    "tool": "show_running_scriptlets_card",
+    "input": {},
+    "output_description": "Renders Prefab Dashboard KPIs + DataTable of live instances"
+  },
+  {
+    "tool": "show_ahk_help_card",
+    "input": {
+      "level": "quick"
+    },
+    "output_description": "Renders six-tab help viewer with Markdown content"
+  },
+  {
+    "tool": "show_scriptlet_detail_card",
+    "input": {
+      "script_id": "quick_notes"
+    },
+    "output_description": "Renders scriptlet source code with metadata Badges and Kbd chips"
+  },
+  {
+    "tool": "show_generation_result_card",
+    "input": {
+      "script_id": "hello_world"
+    },
+    "output_description": "Renders generated script with Code block and safety warning"
+  },
+  {
+    "tool": "show_server_status_card",
+    "input": {},
+    "output_description": "Renders server Dashboard KPIs and config DataTable"
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_description": "Lists all scriptlets with running status"
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "clipboard_manager"
+    },
+    "output_description": "Runs clipboard manager script"
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "window_snapper"
+    },
+    "output_description": "Runs window snap utility"
+  },
+  {
+    "tool": "stop_scriptlet",
+    "input": {
+      "script_id": "clipboard_manager"
+    },
+    "output_description": "Stops clipboard manager script"
+  },
+  {
+    "tool": "list_running_scriptlets",
+    "input": {},
+    "output_description": "Lists all currently running scriptlets"
+  },
+  {
+    "tool": "get_scriptlet_source",
+    "input": {
+      "script_id": "window_manager"
+    },
+    "output_description": "Gets full source of window_manager.ahk"
+  },
+  {
+    "tool": "get_scriptlet_metadata",
+    "input": {
+      "script_id": "clipboard_manager"
+    },
+    "output_description": "Gets @header metadata from clipboard_manager.ahk"
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "A script that opens my browser with Win+B",
+      "filename": "browser_launcher"
+    },
+    "output_description": "Generates browser launcher AI script"
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {
+      "category": "windows"
+    },
+    "output_description": "Lists window-management prompt templates"
+  },
+  {
+    "tool": "refine_ahk_prompt",
+    "input": {
+      "rough": "Help me organize windows"
+    },
+    "output_description": "Refines vague window organization idea"
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "mcp_server"
+    },
+    "output_description": "Server configuration documentation"
+  },
+  {
+    "tool": "show_help",
+    "input": {},
+    "output_description": "Returns browser help URLs"
+  },
+  {
+    "tool": "show_scriptlets_card",
+    "input": {},
+    "output_description": "Shows rich scriptlets card"
+  },
+  {
+    "tool": "show_running_scriptlets_card",
+    "input": {},
+    "output_description": "Shows running instances dashboard"
+  },
+  {
+    "tool": "show_ahk_help_card",
+    "input": {
+      "level": "reference"
+    },
+    "output_description": "AHK reference card"
+  },
+  {
+    "tool": "show_scriptlet_detail_card",
+    "input": {
+      "script_id": "clipboard_manager"
+    },
+    "output_description": "Clipboard manager detail card"
+  },
+  {
+    "tool": "show_generation_result_card",
+    "input": {
+      "script_id": "window_snapper"
+    },
+    "output_description": "Generated script review card"
+  },
+  {
+    "tool": "show_server_status_card",
+    "input": {},
+    "output_description": "Server health and config card"
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "text_expander"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "text_expander",
+      "pid": 12346,
+      "source": "direct"
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "gui_calculator"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "gui_calculator",
+      "source": "bridge"
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "file_organizer"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "file_organizer",
+      "pid": 12347
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "mouse_gestures"
+    },
+    "output_example": {
+      "success": true,
+      "source": "bridge"
+    }
+  },
+  {
+    "tool": "stop_scriptlet",
+    "input": {
+      "script_id": "text_expander"
+    },
+    "output_example": {
+      "success": true,
+      "pids": [
+        12346
+      ]
+    }
+  },
+  {
+    "tool": "stop_scriptlet",
+    "input": {
+      "script_id": "gui_calculator"
+    },
+    "output_example": {
+      "success": true,
+      "source": "bridge"
+    }
+  },
+  {
+    "tool": "list_running_scriptlets",
+    "input": {},
+    "output_example": {
+      "instances": [
+        {
+          "script_id": "text_expander",
+          "pid": 12346,
+          "source": "direct",
+          "hotkeys": "Win+T",
+          "description": "Text expansion utility"
+        },
+        {
+          "script_id": "gui_calculator",
+          "pid": null,
+          "source": "bridge",
+          "hotkeys": "Win+C"
+        }
+      ],
+      "direct_tracked": 1
+    }
+  },
+  {
+    "tool": "get_scriptlet_metadata",
+    "input": {
+      "script_id": "window_snapper"
+    },
+    "output_example": {
+      "found": true,
+      "metadata": {
+        "name": "Window Snapper",
+        "description": "Snap windows to grid positions",
+        "version": "2.1.0",
+        "hotkeys": "Win+Left,Win+Right,Win+Up",
+        "category": "windows",
+        "author": "Sandra"
+      }
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Create a script that types my email address when I type @@",
+      "filename": "email_autotype"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "email_autotype",
+      "provider": "sampling"
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "A script to toggle dark mode on websites"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "dark_mode_toggle",
+      "provider": "lm_studio"
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Make a window always on top with Ctrl+Space"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "always_on_top",
+      "provider": "http_ollama"
+    }
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {
+      "category": "gui"
+    },
+    "output_example": {
+      "prompts": [
+        {
+          "id": "gui_dialog",
+          "title": "Custom Dialog",
+          "category": "gui",
+          "tags": [
+            "gui",
+            "dialog"
+          ]
+        },
+        {
+          "id": "gui_input",
+          "title": "Input Box",
+          "category": "gui"
+        }
+      ],
+      "categories": [
+        "hotkeys",
+        "gui",
+        "clipboard",
+        "files",
+        "windows"
+      ]
+    }
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {
+      "category": "productivity"
+    },
+    "output_example": {
+      "prompts": [
+        {
+          "id": "prod_launcher",
+          "title": "App Launcher",
+          "category": "productivity"
+        },
+        {
+          "id": "prod_timer",
+          "title": "Pomodoro Timer",
+          "category": "productivity"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "refine_ahk_prompt",
+    "input": {
+      "rough": "A script to manage my windows better"
+    },
+    "output_example": {
+      "success": true,
+      "refined": "Create an AutoHotkey v2 script that provides custom window management..."
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "reference"
+    },
+    "output_example": {
+      "level": "reference",
+      "content": "# AHK v2 Syntax Reference\n\n## Variables\nVariables are untyped..."
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "usage"
+    },
+    "output_example": {
+      "level": "usage",
+      "content": "# Practical AHK Patterns\n\n## Window Management\nUse WinMove, WinActivate..."
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "no_ahk_exe"
+    },
+    "output_example": {
+      "success": false,
+      "error": "AutoHotkey not found. Set AUTOHOTKEY_EXE or install AHK v2."
+    }
+  },
+  {
+    "tool": "get_scriptlet_source",
+    "input": {
+      "script_id": "ai_generated_example"
+    },
+    "output_example": {
+      "found": true,
+      "path": "d:/dev/repos/autohotkey-test/scriptlets/ai_generated/ai_generated_example.ahk",
+      "source": "; @name AI Generated Example\n; @category ai_generated\n#Requires AutoHotkey v2.0\nMsgBox \"Hello from AI!\""
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Create a volume control OSD with mouse wheel",
+      "filename": "volume_osd"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "volume_osd",
+      "provider": "sampling"
+    }
+  },
+  {
+    "tool": "generate_scriptlet",
+    "input": {
+      "prompt": "Make a script that shows network stats on Win+N",
+      "filename": "network_stats"
+    },
+    "output_example": {
+      "success": true,
+      "script_id": "network_stats"
+    }
+  },
+  {
+    "tool": "refine_ahk_prompt",
+    "input": {
+      "rough": "clipboard tool"
+    },
+    "output_example": {
+      "success": true,
+      "refined": "Create an AutoHotkey v2 clipboard manager that maintains a history..."
+    }
+  },
+  {
+    "tool": "refine_ahk_prompt",
+    "input": {
+      "rough": "AutoHotkey script for file renaming"
+    },
+    "output_example": {
+      "success": true,
+      "refined": "Create an AutoHotkey v2 batch file renamer with GUI interface..."
+    }
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {
+      "category": "clipboard"
+    },
+    "output_example": {
+      "prompts": [
+        {
+          "id": "clip_history",
+          "title": "Clipboard History",
+          "category": "clipboard"
+        },
+        {
+          "id": "clip_format",
+          "title": "Clipboard Formatter",
+          "category": "clipboard"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {
+      "category": "files"
+    },
+    "output_example": {
+      "prompts": [
+        {
+          "id": "file_batch",
+          "title": "Batch File Renamer",
+          "category": "files"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "list_generation_prompts",
+    "input": {
+      "category": "system"
+    },
+    "output_example": {
+      "prompts": [
+        {
+          "id": "sys_info",
+          "title": "System Information",
+          "category": "system"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "show_scriptlet_detail_card",
+    "input": {
+      "script_id": "text_expander"
+    },
+    "output_description": "Shows text_expander script with metadata and hotkeys"
+  },
+  {
+    "tool": "show_scriptlet_detail_card",
+    "input": {
+      "script_id": "volume_osd"
+    },
+    "output_description": "Shows volume OSD script"
+  },
+  {
+    "tool": "show_generation_result_card",
+    "input": {
+      "script_id": "email_autotype"
+    },
+    "output_description": "Shows generated email autotype script"
+  },
+  {
+    "tool": "show_ahk_help_card",
+    "input": {
+      "level": "language"
+    },
+    "output_description": "AHK language reference in card format"
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "mcp_server"
+    },
+    "output_description": "MCP server config and API documentation"
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_79"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_79"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10079
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 79"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_80"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_80"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10080
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 80"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_81"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_81"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10081
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 81"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_82"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_82"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10082
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 82"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_83"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_83"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10083
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 83"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_84"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_84"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10084
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 84"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_85"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_85"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10085
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 85"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_86"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_86"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10086
+    }
+  },
+  {
+    "tool": "ahk_help",
+    "input": {
+      "level": "quick"
+    },
+    "output_example": {
+      "level": "quick",
+      "content": "Help content 86"
+    }
+  },
+  {
+    "tool": "list_scriptlets",
+    "input": {},
+    "output_example": {
+      "scriptlets": [
+        {
+          "id": "script_87"
+        }
+      ]
+    }
+  },
+  {
+    "tool": "run_scriptlet",
+    "input": {
+      "script_id": "script_87"
+    },
+    "output_example": {
+      "success": true,
+      "pid": 10087
+    }
+  }
+]

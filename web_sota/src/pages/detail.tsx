@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+import { API_BASE } from "@/lib/api";
 import {
   ArrowLeft,
   FileCode,
@@ -140,7 +141,7 @@ export function Detail() {
   const load = useCallback(() => {
     if (!scriptId) return;
     setLoading(true);
-    fetch(`/api/scriptlet/${encodeURIComponent(scriptId)}`)
+    fetch(`${API_BASE}/api/scriptlet/${encodeURIComponent(scriptId)}`)
       .then((r) => r.json() as Promise<ScriptletDetail>)
       .then((d) => {
         setDetail(d);
@@ -156,7 +157,7 @@ export function Detail() {
     setRunning(true);
     setActionMsg(null);
     try {
-      const r = await fetch("/api/run_scriptlet", {
+      const r = await fetch(API_BASE + "/api/run_scriptlet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ script_id: scriptId }),
@@ -179,7 +180,7 @@ export function Detail() {
     setStopping(true);
     setActionMsg(null);
     try {
-      const r = await fetch("/api/stop_scriptlet", {
+      const r = await fetch(API_BASE + "/api/stop_scriptlet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ script_id: scriptId }),

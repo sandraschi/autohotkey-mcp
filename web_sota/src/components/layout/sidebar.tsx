@@ -11,6 +11,7 @@ import {
   Settings2,
   ChevronLeft,
   ChevronRight,
+  ScrollText,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/tools", label: "Prefab Tools", icon: Wand2 },
   { href: "/settings", label: "LLM Settings", icon: Settings2 },
   { href: "/status", label: "Status", icon: Activity },
+  { href: "/logging", label: "Logging", icon: ScrollText },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

@@ -1,0 +1,22 @@
+{
+  "manifest_version": "0.2",
+  "name": "autohotkey-mcp",
+  "version": "0.2.0",
+  "description": "MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata, AI generation (sampling), prefab UI cards, MCP prompts. Uses ScriptletCOMBridge and autohotkey-test repo as depot.",
+  "author": { "name": "sandraschi" },
+  "server": {
+    "type": "python",
+    "entry_point": "src/autohotkey_mcp/__main__.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": ["run","--directory","${PWD}","python","-m","autohotkey_mcp"],
+      "env": {
+        "PYTHONPATH": "${PWD}/src",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  },
+  "tools": [
+    { "name": "list_scriptlets", "description": "list_scriptlets" }
+  ]
+}

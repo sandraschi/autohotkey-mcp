@@ -1,15 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { Settings2, RefreshCw, Check, AlertCircle, Loader2, Eye, EyeOff, Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/common/utils";
+import { API_BASE } from "@/lib/api";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface LLMSettings {
   base_url: string;
   model: string;
-  provider: "ollama" | "lmstudio" | "openai" | string;
+  provider: string;
   timeout: number;
   api_key_set: boolean;
+}
+
+interface Provider {
+  id: string;
+  label: string;
+  base_url: string;
+  models: string[];
+  needs_key: boolean;
+}
+
+interface ProvidersResult {
+  providers: Provider[];
 }
 
 interface ModelsResult {
@@ -18,34 +31,6 @@ interface ModelsResult {
   base_url: string;
   errors: string[];
 }
-
-// ── Provider presets ───────────────────────────────────────────────────────────
-
-const PROVIDERS = [
-  {
-    id: "ollama",
-    label: "Ollama",
-    url: "http://127.0.0.1:11434/v1",
-    note: "Local models via Ollama. Default port 11434.",
-    needsKey: false,
-  },
-  {
-    id: "lmstudio",
-    label: "LM Studio",
-    url: "http://127.0.0.1:1234/v1",
-    note: "LM Studio local server. Default port 1234.",
-    needsKey: false,
-  },
-  {
-    id: "openai",
-    label: "OpenAI-compatible",
-    url: "http://127.0.0.1:11434/v1",
-    note: "Any OpenAI-compatible endpoint (localhost only for security).",
-    needsKey: true,
-  },
-] as const;
-
-type ProviderId = (typeof PROVIDERS)[number]["id"];
 
 // ── StatusDot ──────────────────────────────────────────────────────────────────
 
@@ -73,7 +58,7 @@ export function LLMSettings() {
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
   // Edit state
-  const [provider, setProvider] = useState<ProviderId>("ollama");
+  const [provider, setProvider] = useState("ollama");
   const [baseUrl, setBaseUrl] = useState("http://127.0.0.1:11434/v1");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -92,19 +77,37 @@ export function LLMSettings() {
   // Connection test
   const [testState, setTestState] = useState<boolean | null>(null);
 
+  // Dynamic providers
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [providerMap, setProviderMap] = useState<Record<string, Provider>>({});
+
+  // ── Fetch providers on mount ───────────────────────────────────────────────
+
+  useEffect(() => {
+    fetch(API_BASE + "/api/llm/providers")
+      .then((r) => r.json() as Promise<ProvidersResult>)
+      .then((d) => {
+        const list = d.providers || [];
+        setProviders(list);
+        const map: Record<string, Provider> = {};
+        list.forEach((p) => { map[p.id] = p; });
+        setProviderMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
   // ── Load current settings ──────────────────────────────────────────────────
 
   const loadSettings = useCallback(() => {
     setLoadErr(null);
-    fetch("/api/llm/settings")
+    fetch(API_BASE + "/api/llm/settings")
       .then((r) => r.json() as Promise<LLMSettings>)
       .then((s) => {
         setSettings(s);
         setBaseUrl(s.base_url);
         setModel(s.model);
         setTimeout_(s.timeout ?? 120);
-        const p = PROVIDERS.find((pr) => pr.id === s.provider)?.id ?? "ollama";
-        setProvider(p as ProviderId);
+        setProvider(s.provider);
       })
       .catch((e) => setLoadErr(e instanceof Error ? e.message : "Failed to load settings"));
   }, []);
@@ -118,7 +121,7 @@ export function LLMSettings() {
     setModelsErr(null);
     setTestState(null);
     try {
-      const r = await fetch("/api/llm/models");
+      const r = await fetch(API_BASE + "/api/llm/models");
       const d = await r.json() as ModelsResult;
       if (d.models.length > 0) {
         setModels(d.models);
@@ -143,11 +146,16 @@ export function LLMSettings() {
 
   // ── Apply provider preset ──────────────────────────────────────────────────
 
-  const applyProvider = (p: ProviderId) => {
-    setProvider(p);
-    const preset = PROVIDERS.find((pr) => pr.id === p);
-    if (preset) setBaseUrl(preset.url);
-    setModels([]);
+  const applyProvider = (id: string) => {
+    setProvider(id);
+    const p = providerMap[id];
+    if (p) {
+      setBaseUrl(p.base_url);
+      setModels(p.models);
+      if (p.models.length && !p.models.includes(model)) {
+        setModel(p.models[0]);
+      }
+    }
     setTestState(null);
     setModelsErr(null);
     setSaveResult(null);
@@ -165,7 +173,7 @@ export function LLMSettings() {
         timeout,
       };
       if (apiKey.trim()) body.api_key = apiKey.trim();
-      const r = await fetch("/api/llm/settings", {
+      const r = await fetch(API_BASE + "/api/llm/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -197,7 +205,7 @@ export function LLMSettings() {
     );
   }
 
-  const selectedPreset = PROVIDERS.find((p) => p.id === provider);
+  const selectedPreset = providerMap[provider];
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -238,7 +246,7 @@ export function LLMSettings() {
       <div className="space-y-2">
         <label className="text-sm font-semibold text-slate-300">Provider</label>
         <div className="flex flex-wrap gap-2">
-          {PROVIDERS.map((p) => (
+          {providers.map((p) => (
             <button
               key={p.id}
               type="button"
@@ -255,7 +263,7 @@ export function LLMSettings() {
           ))}
         </div>
         {selectedPreset && (
-          <p className="text-xs text-slate-500">{selectedPreset.note}</p>
+          <p className="text-xs text-slate-500">{selectedPreset.label} — {selectedPreset.base_url}</p>
         )}
       </div>
 
@@ -338,7 +346,7 @@ export function LLMSettings() {
       </div>
 
       {/* API key (shown when provider needs it or already set) */}
-      {(selectedPreset?.needsKey || settings?.api_key_set) && (
+      {(selectedPreset?.needs_key || settings?.api_key_set) && (
         <div className="space-y-1.5">
           <label className="text-sm font-semibold text-slate-300">
             API Key {settings?.api_key_set && <span className="text-emerald-400 text-xs">(already set)</span>}

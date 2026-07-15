@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  Bot, Loader2, MessageSquare, Send, Sparkles, Wand2,
+  Bot, Download, Loader2, MessageSquare, Send, Sparkles, Wand2,
   Settings2, ChevronDown, Trash2, Copy, Check,
 } from "lucide-react";
 import { cn } from "@/common/utils";
+import { API_BASE } from "@/lib/api";
+
+const LS_KEY = "autohotkey-mcp-chat-history";
+const PERS_KEY = "autohotkey-mcp-chat-personality";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -12,6 +16,16 @@ interface Persona { id: string; name: string; description: string; }
 interface PresetPrompt { id: string; title: string; category?: string; prompt: string; }
 interface ChatMessage { role: "user" | "assistant"; content: string; }
 interface LLMSettings { base_url: string; model: string; provider: string; api_key_set: boolean; }
+
+const EXAMPLE_PROMPTS = [
+  { group: "Scripts", items: ["Write a hotkey for volume control", "Create a window manager script", "Make a clipboard history tool"] },
+  { group: "Debug", items: ["Fix this AHK syntax error", "Why is my hotkey not firing?", "Add error handling to this script"] },
+  { group: "Automation", items: ["Auto-fill a web form", "Monitor a folder for new files", "Schedule a daily backup script"] },
+];
+
+function loadHistory(): ChatMessage[] { try { const d = localStorage.getItem(LS_KEY); return d ? JSON.parse(d) : []; } catch { return []; } }
+function saveHistory(msgs: ChatMessage[]) { try { localStorage.setItem(LS_KEY, JSON.stringify(msgs.slice(-100))); } catch {} }
+function loadPersonality(): string { try { return localStorage.getItem(PERS_KEY) || "ahk_expert"; } catch { return "ahk_expert"; } }
 
 // ── CopyButton ─────────────────────────────────────────────────────────────────
 
@@ -58,7 +72,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 // ── Model badge ────────────────────────────────────────────────────────────────
 
 function ModelBadge({ model, provider }: { model: string; provider: string }) {
-  const label = model.length > 24 ? `…${model.slice(-22)}` : model;
+  const label = model.length > 24 ? `...${model.slice(-22)}` : model;
   return (
     <Link
       to="/settings"
@@ -86,11 +100,11 @@ export function Chat() {
 
   // Chat state
   const [personas, setPersonas] = useState<Persona[]>([]);
-  const [personaId, setPersonaId] = useState<string>("ahk_expert");
+  const [personaId, setPersonaId] = useState(() => loadPersonality());
   const [prompts, setPrompts] = useState<PresetPrompt[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [catFilter, setCatFilter] = useState<string>("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadHistory());
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [streamEnabled, setStreamEnabled] = useState(true);
@@ -107,20 +121,23 @@ export function Chat() {
   // ── Load on mount ────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    fetch("/api/llm/settings")
+    fetch(API_BASE + "/api/llm/settings")
       .then((r) => r.json() as Promise<LLMSettings>)
       .then(setLlmSettings)
       .catch(() => null);
 
-    fetch("/api/personas")
+    fetch(API_BASE + "/api/personas")
       .then((r) => r.json())
       .then((d) => setPersonas(Array.isArray(d.personas) ? d.personas : []))
       .catch(() => setPersonas([]));
   }, []);
 
+  useEffect(() => { saveHistory(messages) }, [messages]);
+  useEffect(() => { localStorage.setItem(PERS_KEY, personaId) }, [personaId]);
+
   const loadPrompts = useCallback(() => {
     const q = catFilter ? `?category=${encodeURIComponent(catFilter)}` : "";
-    fetch(`/api/prompts${q}`)
+    fetch(`${API_BASE}/api/prompts${q}`)
       .then((r) => r.json())
       .then((d) => {
         setPrompts(Array.isArray(d.prompts) ? d.prompts : []);
@@ -136,7 +153,7 @@ export function Chat() {
 
   const fetchModels = async () => {
     try {
-      const r = await fetch("/api/llm/models");
+      const r = await fetch(API_BASE + "/api/llm/models");
       const d = await r.json() as { models: string[] };
       setAvailableModels(d.models ?? []);
     } catch { setAvailableModels([]); }
@@ -152,7 +169,7 @@ export function Chat() {
   const switchModel = async (m: string) => {
     setSwitchingModel(true);
     try {
-      await fetch("/api/llm/settings", {
+      await fetch(API_BASE + "/api/llm/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: m }),
@@ -180,7 +197,7 @@ export function Chat() {
         persona_id: personaId,
         stream: streamEnabled,
       };
-      const r = await fetch("/api/chat", {
+      const r = await fetch(API_BASE + "/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -252,7 +269,7 @@ export function Chat() {
     setRefineLoading(true);
     setRefineOut(null);
     try {
-      const r = await fetch("/api/refine_prompt", {
+      const r = await fetch(API_BASE + "/api/refine_prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rough, persona_id: personaId }),
@@ -268,10 +285,21 @@ export function Chat() {
     }
   };
 
+  const exportChat = () => {
+    const text = messages.map(m => `${m.role === "user" ? "You" : "Assistant"}: ${m.content}`).join("\n\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `autohotkey-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="chat-page">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -326,7 +354,7 @@ export function Chat() {
                 ) : (
                   <div className="px-3 py-3 text-xs text-slate-500">
                     <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1.5" />
-                    Fetching models from {llmSettings.base_url}…
+                    Fetching models from {llmSettings.base_url}...
                   </div>
                 )}
               </div>
@@ -347,13 +375,14 @@ export function Chat() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_272px]">
         {/* ── Chat panel ─────────────────────────────────────────────────── */}
-        <div className="flex flex-col rounded-xl border border-slate-800 bg-slate-900/40 min-h-[500px]">
+        <div className="flex flex-col rounded-xl border border-slate-800 bg-slate-900/40 min-h-[500px]" data-testid="dashboard">
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 px-3 py-2" data-testid="chat-controls">
             <select
               value={personaId}
               onChange={(e) => setPersonaId(e.target.value)}
               className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+              data-testid="personality-select"
             >
               {personas.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -368,24 +397,35 @@ export function Chat() {
               />
               Stream
             </label>
+            <span className="text-xs text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded border border-amber-800/50" data-testid="skill-badge">autohotkey-mcp</span>
+            <span className={`inline-block w-2 h-2 rounded-full ${llmSettings ? "bg-green-500" : "bg-red-500"}`} data-testid="backend-dot" />
             <div className="flex-1" />
             {llmSettings && (
               <ModelBadge model={llmSettings.model} provider={llmSettings.provider} />
             )}
-            {messages.length > 0 && (
-              <button
-                type="button"
-                onClick={() => { setMessages([]); setLlmError(null); }}
-                className="p-1 rounded text-slate-600 hover:text-red-400 transition-colors"
-                title="Clear conversation"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={exportChat}
+              disabled={messages.length === 0}
+              className="p-1 rounded text-slate-600 hover:text-slate-300 transition-colors disabled:opacity-30"
+              title="Export"
+              data-testid="chat-export"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMessages([]); setLlmError(null); }}
+              className="p-1 rounded text-slate-600 hover:text-red-400 transition-colors"
+              title="Clear conversation"
+              data-testid="chat-clear"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3" data-testid="chat-messages">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-3">
                 <Bot className="h-10 w-10 text-slate-700" />
@@ -398,13 +438,25 @@ export function Chat() {
                     {" "}via <span className="text-slate-500">{llmSettings.base_url}</span>
                   </p>
                 )}
+                <div className="flex flex-wrap gap-1 max-w-md" data-testid="example-prompts">
+                  {EXAMPLE_PROMPTS.flatMap(g => g.items).map((p, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setInput(p)}
+                      className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 transition-colors"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
               messages.map((m, i) => <MessageBubble key={`${i}-${m.role}`} msg={m} />)
             )}
             {loading && !messages[messages.length - 1]?.content && (
               <div className="flex items-center gap-2 text-slate-500 text-xs pl-9">
-                <Loader2 className="h-4 w-4 animate-spin" /> Thinking…
+                <Loader2 className="h-4 w-4 animate-spin" /> Thinking...
               </div>
             )}
             <div ref={bottomRef} />
@@ -420,14 +472,16 @@ export function Chat() {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
               }}
               rows={2}
-              placeholder="Message… (Enter to send, Shift+Enter for newline)"
+              placeholder="Message... (Enter to send, Shift+Enter for newline)"
               className="flex-1 resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+              data-testid="chat-input"
             />
             <button
               type="button"
               onClick={() => void send()}
               disabled={loading || !input.trim()}
               className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white p-2.5 transition-colors"
+              data-testid="chat-send"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </button>
@@ -448,7 +502,7 @@ export function Chat() {
               value={refineRough}
               onChange={(e) => setRefineRough(e.target.value)}
               rows={3}
-              placeholder="e.g. make a thing that keeps screen awake…"
+              placeholder="e.g. make a thing that keeps screen awake..."
               className="w-full resize-none rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500/30"
             />
             <button
@@ -514,7 +568,7 @@ export function Chat() {
             <Settings2 className="h-4 w-4 text-amber-500/70" />
             LLM Settings
             <span className="ml-auto text-xs text-slate-600">
-              {llmSettings?.provider ?? "…"}
+              {llmSettings?.provider ?? "..."}
             </span>
           </Link>
         </aside>
