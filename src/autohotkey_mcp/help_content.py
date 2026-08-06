@@ -59,7 +59,7 @@ ShowHello(*) {
 }
 
 LogErrors(e, *) {
-    FileAppend("[" FormatTime(A_Now) "] " e.Message "`n", A_ScriptDir "\errors.log")
+    FileAppend("[" FormatTime(A_Now) "] " e.Message "`n", A_ScriptDir "\\errors.log")
 }
 ```
 
@@ -233,9 +233,9 @@ StrSplit("a,b,c", ",")       ; returns Array
 s := Format("{1} has {:d} items ({:.2f}%)", name, n, pct)
 
 ; RegEx
-if RegExMatch(s, "(\d+)", &m)
+if RegExMatch(s, "(\\d+)", &m)
     MsgBox("Found: " m[1])
-s2 := RegExReplace(s, "\s+", "_")
+s2 := RegExReplace(s, "\\s+", "_")
 ```
 
 ## Files & Folders
@@ -614,8 +614,8 @@ reads these fields for the list, detail, and generate tools.
 #SingleInstance Force
 ```
 
-**Required fields:** `@name`, `@description`, `@category`  
-**Recommended:** `@version`, `@hotkeys`  
+**Required fields:** `@name`, `@description`, `@category`
+**Recommended:** `@version`, `@hotkeys`
 **Categories:** `hotkeys` `gui` `clipboard` `files` `windows` `strings`
 `system` `productivity` `games` `testing` `network` `ai_generated` `general`
 
@@ -808,7 +808,7 @@ TOOLS = """\
 
 Returns all scriptlets in the depot with metadata.
 
-**Source priority:** ScriptletCOMBridge (port 10744) → depot scan fallback  
+**Source priority:** ScriptletCOMBridge (port 10744) → depot scan fallback
 **Returns:** Array of `{id, name, description, category, running, path}`
 
 ```json
@@ -827,7 +827,7 @@ Returns all scriptlets in the depot with metadata.
 
 Run a scriptlet by its id (filename stem without `.ahk`).
 
-**Bridge mode:** `GET /run/{script_id}.ahk` on 10744  
+**Bridge mode:** `GET /run/{script_id}.ahk` on 10744
 **Direct mode:** Spawns `AutoHotkey64.exe scriptlets/{id}.ahk`, tracks PID
 
 ```
@@ -884,7 +884,7 @@ Generate a new AHK v2 script from a natural-language prompt.
 uses the host LLM via `ctx.sample()`. This is the preferred path — no
 local model required.
 
-**Path 2 — Localhost HTTP:** Falls back to `AUTOHOTKEY_LLM_BASE_URL` 
+**Path 2 — Localhost HTTP:** Falls back to `AUTOHOTKEY_LLM_BASE_URL`
 (default: Ollama on port 11434) when sampling is unavailable.
 
 **Output:** Written to `scriptlets/ai_generated/{filename}.ahk` only

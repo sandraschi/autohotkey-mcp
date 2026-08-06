@@ -9,7 +9,7 @@ def test_get_all_levels() -> None:
     levels = help_content.get_all_levels()
     assert isinstance(levels, dict)
     assert set(levels.keys()) == {"quick", "reference", "language", "usage", "tools", "mcp_server"}
-    for k, v in levels.items():
+    for _k, v in levels.items():
         assert isinstance(v, str)
         assert len(v) > 0
 

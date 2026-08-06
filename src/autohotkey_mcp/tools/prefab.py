@@ -27,6 +27,7 @@ from fastmcp import FastMCP
 from fastmcp.tools import ToolResult
 from prefab_ui.app import PrefabApp
 from prefab_ui.components import (
+    H3,
     Badge,
     Card,
     CardContent,
@@ -40,7 +41,6 @@ from prefab_ui.components import (
     DataTable,
     DataTableColumn,
     Dot,
-    H3,
     Kbd,
     Markdown,
     Metric,
@@ -99,6 +99,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         logger.info("AUTOHOTKEY_PREFAB_APPS=0 — skipping Prefab tool registration")
         return
 
+    from autohotkey_mcp import help_content
     from autohotkey_mcp.tools.scriptlets import (
         _bridge_get,
         _depot_path,
@@ -108,7 +109,6 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         _read_metadata,
         get_running_overview,
     )
-    from autohotkey_mcp import help_content
 
     # ──────────────────────────────────────────────────────────────────────────
     # 1. ALL SCRIPTLETS — DataTable

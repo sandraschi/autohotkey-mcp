@@ -21,9 +21,8 @@ from fastmcp import FastMCP
 from fastmcp.server.context import Context
 from fastmcp.server.dependencies import OptionalCurrentContext
 
-from autohotkey_mcp import help_content
+from autohotkey_mcp import help_content, prompt_catalog
 from autohotkey_mcp import personas as personas_mod
-from autohotkey_mcp import prompt_catalog
 from autohotkey_mcp.cua_hud import CuaHUD
 from autohotkey_mcp.prompt_refine import refine_generation_prompt
 from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file

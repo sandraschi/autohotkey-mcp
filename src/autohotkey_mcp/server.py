@@ -16,19 +16,18 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastmcp import FastMCP
 
-from autohotkey_mcp import help_content
+from autohotkey_mcp import help_content, prompt_catalog
 from autohotkey_mcp import personas as personas_mod
-from autohotkey_mcp import prompt_catalog
 from autohotkey_mcp.ahk_llm import chat_via_http, chat_via_http_stream, http_llm_available
 from autohotkey_mcp.prompt_refine import refine_generation_prompt
-from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
 from autohotkey_mcp.prompt_resources import register_prompt_resources
 from autohotkey_mcp.prompts import register_prompts
 from autohotkey_mcp.providers import register_providers
+from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
 from autohotkey_mcp.tools import (
     register_macro_tools,
-    register_scriptlet_tools,
     register_prefab_tools,
+    register_scriptlet_tools,
 )
 from autohotkey_mcp.tools.scriptlets import get_running_overview
 
@@ -503,7 +502,7 @@ async def api_stop_scriptlet(request: Request) -> JSONResponse:
 @app.get("/api/scriptlet/{script_id}")
 async def api_scriptlet_detail(script_id: str) -> JSONResponse:
     """SPA: source + metadata for a single scriptlet."""
-    from autohotkey_mcp.tools.scriptlets import _read_metadata, _depot_path
+    from autohotkey_mcp.tools.scriptlets import _depot_path, _read_metadata
 
     sid = script_id.strip().removesuffix(".ahk")
     path = _depot_path(sid)

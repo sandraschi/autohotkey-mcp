@@ -1,7 +1,7 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
 import 'scripts/just/fleet.just'
 
-# AutoHotkey MCP – just recipes
+# --- AutoHotkey MCP  just recipes ---
 # Usage: just <recipe>   or   just --list
 
 # Open the interactive recipe dashboard in the browser
@@ -50,3 +50,9 @@ clean:
 # Backend health check (requires server running)
 health:
     curl -s http://127.0.0.1:10746/health
+
+# Bootstrap: install dev deps + pre-commit hook
+bootstrap:
+    uv sync --group dev
+    uv run pre-commit install
+    Write-Host "Pre-commit hooks installed." -ForegroundColor Green

@@ -12,6 +12,7 @@ as a kwarg and catch TypeError so we degrade gracefully on restricted hosts.
 from __future__ import annotations
 
 import logging
+
 from fastmcp.server.context import Context
 
 from autohotkey_mcp.ahk_llm import complete_via_http, http_llm_available
