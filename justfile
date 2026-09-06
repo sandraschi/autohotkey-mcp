@@ -35,8 +35,7 @@ install:
 
 # Install frontend deps
 install-web:
-    cd web_sota
-    npm install
+    cd web_sota; npm install
 
 # Launch full webapp (backend + frontend, opens browser)
 # Prefer: .\web_sota\start.ps1
