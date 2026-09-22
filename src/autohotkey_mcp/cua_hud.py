@@ -1,4 +1,4 @@
-"""CUA HUD overlay — "CUA at work" blinking red + e-stop button.
+"""CUA HUD overlay - "CUA at work" blinking red + e-stop button.
 
 Spawning a HUD:
     hud = CuaHUD()
@@ -38,7 +38,7 @@ class CuaHUD:
         try:
             import tkinter as tk
         except ImportError:
-            logger.warning("tkinter not available — HUD disabled")
+            logger.warning("tkinter not available - HUD disabled")
             return
 
         root = tk.Tk()
@@ -75,21 +75,44 @@ class CuaHUD:
         self._root = root
         self._label = label
 
-        def _blink():
-            while not self._stop.is_set():
+        def _check_stop():
+            # Tkinter's Tcl interpreter is not thread-safe: quit()/destroy() must
+            # run on the thread that owns the mainloop, never from stop()'s caller
+            # thread directly (doing so crashes the whole process with
+            # "Tcl_AsyncDelete: async handler deleted by the wrong thread").
+            # stop() only sets self._stop; this poll, running on the Tk thread via
+            # root.after(), is what actually tears the window down.
+            if self._stop.is_set():
                 try:
-                    self._blink_state = not self._blink_state
-                    if self._label and self._label.winfo_exists():
-                        fg = "red" if self._blink_state else "white"
-                        bg = "white" if self._blink_state else "darkred"
-                        self._label.configure(fg=fg, bg=bg)
-                        self._root.configure(bg=bg)
+                    root.quit()
+                    root.destroy()
                 except Exception:
                     pass
-                time.sleep(0.6)
+                return
+            root.after(100, _check_stop)
 
-        blink = threading.Thread(target=_blink, daemon=True)
-        blink.start()
+        root.after(100, _check_stop)
+
+        def _blink():
+            # Must run on the Tk-owning thread (via root.after, not a separate
+            # threading.Thread) -- widget.configure() from another thread is the
+            # same class of Tcl-interpreter violation as calling quit()/destroy()
+            # cross-thread, and this one ran every 600ms for as long as the HUD
+            # was up, making it the likelier source of the async-handler crash.
+            if self._stop.is_set():
+                return
+            try:
+                self._blink_state = not self._blink_state
+                if self._label and self._label.winfo_exists():
+                    fg = "red" if self._blink_state else "white"
+                    bg = "white" if self._blink_state else "darkred"
+                    self._label.configure(fg=fg, bg=bg)
+                    self._root.configure(bg=bg)
+            except Exception:
+                pass
+            root.after(600, _blink)
+
+        root.after(600, _blink)
 
         try:
             root.mainloop()
@@ -106,14 +129,14 @@ class CuaHUD:
         self._thread.start()
 
     def stop(self):
-        """Shut down HUD."""
+        """Signal the HUD to shut down.
+
+        Thread-safe: only sets an Event. Actual Tk teardown happens on the
+        HUD's own thread via the _check_stop poll in _run() -- see the note
+        there for why calling root.quit()/destroy() from here directly used
+        to crash the process.
+        """
         self._stop.set()
-        if self._root:
-            try:
-                self._root.quit()
-                self._root.destroy()
-            except Exception:
-                pass
 
     def _trigger_estop(self):
         self._estop.set()
