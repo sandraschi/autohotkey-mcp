@@ -1,4 +1,4 @@
-"""MCP Prompts for autohotkey-mcp (FastMCP 3.2 @mcp.prompt()).
+"""MCP Prompts for autohotkey-mcp (FastMCP 3.4 @mcp.prompt()).
 
 These are conversation starters / instruction sets that MCP hosts can surface
 to users or use as system instructions. Distinct from the generation prompt catalog

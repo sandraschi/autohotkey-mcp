@@ -1,11 +1,11 @@
-"""LLM completion: **primary** = FastMCP 3.2 `Context.sample` (host / MCP client LLM).
+"""LLM completion: **primary** = FastMCP 3.4 `Context.sample` (host / MCP client LLM).
 
 **Fallback** = localhost OpenAI-compatible HTTP (Ollama, LM Studio, etc.) via `AUTOHOTKEY_LLM_*`.
 Used for script generation, prompt refinement, and any tool that needs a model when sampling is
 unavailable (e.g. HTTP-only SPA or headless runs).
 
-FastMCP 3.2 note: `ctx.sample()` accepts either a string (single user message) or a list of
-SamplingMessage dicts. The `temperature` parameter may not be supported by all hosts — we pass it
+FastMCP 3.4 note: `ctx.sample()` accepts either a string (single user message) or a list of
+SamplingMessage dicts. The `temperature` parameter may not be supported by all hosts - we pass it
 as a kwarg and catch TypeError so we degrade gracefully on restricted hosts.
 """
 
@@ -32,9 +32,9 @@ async def complete_dual_path(
 
     **Order (intentional):**
 
-    1. **FastMCP sampling** — when ``ctx`` is present, call ``ctx.sample`` first. This is the
+    1. **FastMCP sampling** - when ``ctx`` is present, call ``ctx.sample`` first. This is the
        intended path for Cursor, Claude Desktop, and other MCP hosts that expose the client's LLM.
-    2. **Local HTTP** — only if sampling did not return text (no context, unsupported host, error,
+    2. **Local HTTP** - only if sampling did not return text (no context, unsupported host, error,
        or empty response) *and* ``http_llm_available()`` is true.
     """
     raw: str | None = None
@@ -43,7 +43,7 @@ async def complete_dual_path(
 
     if ctx is not None:
         try:
-            # FastMCP 3.2: try with temperature first; fall back without if unsupported
+            # FastMCP 3.4: try with temperature first; fall back without if unsupported
             try:
                 result = await ctx.sample(
                     messages=text_in,

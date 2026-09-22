@@ -1,4 +1,4 @@
-"""FastMCP 3.2 providers for autohotkey-mcp.
+"""FastMCP 3.4 providers for autohotkey-mcp.
 
 Registers a SkillsDirectoryProvider pointing at the .cursor/skills directory
 so agents using CodeMode can discover AHK v2 authoring skills without knowing
@@ -22,12 +22,12 @@ _DEFAULT_SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
 
 
 def register_providers(mcp: FastMCP) -> None:
-    """Register FastMCP 3.2 providers: SkillsDirectoryProvider for AHK skills."""
+    """Register FastMCP 3.4 providers: SkillsDirectoryProvider for AHK skills."""
     skills_dir = Path(os.getenv("AUTOHOTKEY_SKILLS_DIR", str(_DEFAULT_SKILLS_DIR)))
 
     if not skills_dir.exists():
         logger.info(
-            "Skills directory not found at %s — skipping SkillsDirectoryProvider. "
+            "Skills directory not found at %s - skipping SkillsDirectoryProvider. "
             "Set AUTOHOTKEY_SKILLS_DIR or create .cursor/skills/ in the repo root.",
             skills_dir,
         )
