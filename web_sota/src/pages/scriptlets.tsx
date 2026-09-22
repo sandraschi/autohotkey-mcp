@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { FileCode, Loader2, Search, Sparkles } from "lucide-react";
 import { API_BASE } from "@/lib/api";
 
