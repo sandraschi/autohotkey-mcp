@@ -1,0 +1,127 @@
+{
+  "identifier": "sandraschi-autohotkey_mcp",
+  "name": "AutoHotkey MCP",
+  "version": "0.2.0",
+  "description": "Run and manage AutoHotkey v2 scriptlets from your AI assistant: list, launch, stop, inspect source, and generate new scripts via sampling or local LLM. Connects to a script depot (autohotkey-tools) and, when running, the ScriptletCOMBridge on port 10764.",
+  "author": "Sandra Schipal",
+  "authorUrl": "https://github.com/sandraschi",
+  "homepage": "https://github.com/sandraschi/autohotkey-mcp",
+  "icon": "⌨️",
+  "category": "developer",
+  "tags": [
+    "autohotkey",
+    "automation",
+    "windows",
+    "scriptlets",
+    "hotkeys",
+    "code-generation",
+    "desktop-automation"
+  ],
+  "tools": [
+    {
+      "name": "scriptlet_ops",
+      "description": "Scriptlet lifecycle management (portmanteau): list, run, stop, list_running, get_source, get_metadata, promote. 'run'/'stop'/'get_source'/'get_metadata'/'promote' require script_id. 'promote' moves a script from ai_generated/ into the live depot with persistence auto-fix, hotkey-collision check, and lint gate (force=True overrides non-persistence checks).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["list", "run", "stop", "list_running", "get_source", "get_metadata", "promote"]
+          },
+          "script_id": { "type": ["string", "null"], "description": "Scriptlet id, required for run/stop/get_source/get_metadata/promote" },
+          "pid": { "type": ["integer", "null"], "description": "Optional PID to target one instance on stop" },
+          "category": { "type": "string", "default": "utilities", "description": "Category for promote" },
+          "hotkeys": { "type": ["array", "null"], "items": { "type": "string" }, "description": "Hotkeys for promote" },
+          "tags": { "type": ["array", "null"], "items": { "type": "string" }, "description": "Tags for promote" },
+          "priority": { "type": "integer", "default": 20, "description": "Priority for promote" },
+          "force": { "type": "boolean", "default": false, "description": "Override hotkey-collision/lint gate on promote (persistence auto-fix always applies)" }
+        },
+        "required": ["operation"]
+      }
+    },
+    {
+      "name": "ahk_dev_ops",
+      "description": "AI-assisted AHK authoring and help (portmanteau): generate, list_prompts, refine_prompt, help, show_help. 'generate' writes only to scriptlets/ai_generated/ after validation, using FastMCP sampling first with localhost HTTP fallback; no file is written on failure. 'help' levels: quick | reference | language | usage | tools | mcp_server.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["generate", "list_prompts", "refine_prompt", "help", "show_help"]
+          },
+          "prompt": { "type": ["string", "null"], "description": "Natural-language description, required for generate" },
+          "filename": { "type": ["string", "null"], "description": "Optional filename for generate" },
+          "category": { "type": ["string", "null"], "description": "Optional category filter for list_prompts" },
+          "rough": { "type": ["string", "null"], "description": "Vague idea to refine, required for refine_prompt" },
+          "persona_id": { "type": ["string", "null"], "description": "Optional persona for refine_prompt" },
+          "level": { "type": "string", "default": "quick", "description": "Help level for help" },
+          "topic": { "type": ["string", "null"], "description": "Optional topic for help" }
+        },
+        "required": ["operation"]
+      }
+    },
+    {
+      "name": "macro_ops",
+      "description": "//trigger text-expansion macro management (portmanteau): list, get, upsert, delete. Macros are stored in sop/macros.md (single source of truth) and read by macro_expander.ahk in the depot. 'upsert' requires name (lowercase letters/digits/underscore) and template (use {1} {2} ... for positional params).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["list", "get", "upsert", "delete"]
+          },
+          "name": { "type": ["string", "null"], "description": "Macro name, required for get/upsert/delete" },
+          "template": { "type": ["string", "null"], "description": "Template body with {1} {2} ... placeholders, required for upsert" }
+        },
+        "required": ["operation"]
+      }
+    },
+    {
+      "name": "show_scriptlets_card",
+      "description": "Show all AutoHotkey scriptlets as a rich Prefab card: DataTable with running-status Dot, category Badge, search, and pagination. Uses the ScriptletCOMBridge when available, falls back to a depot scan.",
+      "inputSchema": { "type": "object", "properties": {} }
+    },
+    {
+      "name": "show_running_scriptlets_card",
+      "description": "Show currently running AutoHotkey scriptlets as a rich Prefab card: Dashboard KPIs plus a DataTable of live instances with hotkeys, description, and PID.",
+      "inputSchema": { "type": "object", "properties": {} }
+    },
+    {
+      "name": "show_ahk_help_card",
+      "description": "Show AutoHotkey v2 / autohotkey-mcp help as a rich Prefab card with Tabs per help level and Markdown content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "level": { "type": "string", "default": "quick" }
+        }
+      }
+    },
+    {
+      "name": "show_scriptlet_detail_card",
+      "description": "Show a single AutoHotkey scriptlet as a rich Prefab card: source Code block, metadata Badges, and hotkey Kbd chips.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script_id": { "type": "string" }
+        },
+        "required": ["script_id"]
+      }
+    },
+    {
+      "name": "show_generation_result_card",
+      "description": "Show a freshly generated scriptlet from ai_generated/ as a rich Prefab card, including a safety warning before promotion.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script_id": { "type": "string" }
+        },
+        "required": ["script_id"]
+      }
+    },
+    {
+      "name": "show_server_status_card",
+      "description": "Show autohotkey-mcp server status as a rich Prefab card: Dashboard KPIs for bridge/exe status plus a config DataTable.",
+      "inputSchema": { "type": "object", "properties": {} }
+    }
+  ]
+}
