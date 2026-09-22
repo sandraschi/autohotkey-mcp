@@ -16,7 +16,7 @@ import signal
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from fastmcp import FastMCP
@@ -329,8 +329,7 @@ async def get_running_overview() -> dict[str, Any]:
 def register_scriptlet_tools(mcp: FastMCP) -> None:
     """Register scriptlet tools, generate/refine/list_prompts, ahk_help, show_help."""
 
-    @mcp.tool()
-    async def list_scriptlets() -> dict[str, Any]:
+    async def _list_scriptlets() -> dict[str, Any]:
         """
         List all AutoHotkey scriptlets. Uses bridge (10764) when available; else scans depot directly.
         Returns id, name, description, category, running.
@@ -353,8 +352,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             raw_list = []
         return {"scriptlets": _enrich_scriptlet_categories(raw_list), "bridge_url": BRIDGE_URL}
 
-    @mcp.tool()
-    async def run_scriptlet(script_id: str) -> dict[str, Any]:
+    async def _run_scriptlet(script_id: str) -> dict[str, Any]:
         """
         Run a scriptlet by id (e.g. quick_notes). Uses bridge when available; else runs AHK directly and tracks PID.
         """
@@ -395,8 +393,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         except Exception as e:
             return {"success": False, "error": str(e), "script_id": script_id}
 
-    @mcp.tool()
-    async def stop_scriptlet(script_id: str, pid: int | None = None) -> dict[str, Any]:
+    async def _stop_scriptlet(script_id: str, pid: int | None = None) -> dict[str, Any]:
         """
         Stop a running scriptlet. **Direct runs:** kills tracked PID(s); pass ``pid`` to stop one instance when
         several copies of the same script are running. **Bridge:** uses COM bridge stop when no direct match.
@@ -437,16 +434,14 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             "script_id": script_id,
         }
 
-    @mcp.tool()
-    async def list_running_scriptlets() -> dict[str, Any]:
+    async def _list_running_scriptlets() -> dict[str, Any]:
         """
         List **currently running** scriptlets: script id, hotkeys/description from file headers, PID when known
         (direct launch), and whether the row came from the COM bridge or MCP direct run.
         """
         return await get_running_overview()
 
-    @mcp.tool()
-    async def get_scriptlet_source(script_id: str) -> dict[str, Any]:
+    async def _get_scriptlet_source(script_id: str) -> dict[str, Any]:
         """
         Read full source of a scriptlet from the depot (scriptlets/<id>.ahk or scriptlets/ai_generated/<id>.ahk).
         """
@@ -461,8 +456,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             "source": path.read_text(encoding="utf-8", errors="replace"),
         }
 
-    @mcp.tool()
-    async def get_scriptlet_metadata(script_id: str) -> dict[str, Any]:
+    async def _get_scriptlet_metadata(script_id: str) -> dict[str, Any]:
         """
         Read header metadata (@description, @version, @hotkeys, etc.) from the depot file.
         """
@@ -472,8 +466,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             return {"found": False, "script_id": script_id, "metadata": {}}
         return {"found": True, "script_id": script_id, "metadata": _read_metadata(path)}
 
-    @mcp.tool()
-    async def generate_scriptlet(
+    async def _generate_scriptlet(
         prompt: str,
         filename: str | None = None,
         ctx: Context | None = OptionalCurrentContext(),
@@ -489,8 +482,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         """
         return await generate_ahk_script_to_file(prompt, filename, AI_GENERATED_DIR, ctx)
 
-    @mcp.tool()
-    async def list_generation_prompts(category: str | None = None) -> dict[str, Any]:
+    async def _list_generation_prompts(category: str | None = None) -> dict[str, Any]:
         """
         List built-in preset prompts for `generate_scriptlet` (categories: hotkeys, gui, clipboard, files, …).
         Each entry has id, title, category, tags, and prompt text.
@@ -510,8 +502,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             "categories": prompt_catalog.categories(),
         }
 
-    @mcp.tool()
-    async def refine_ahk_prompt(
+    async def _refine_ahk_prompt(
         rough: str,
         persona_id: str | None = None,
         ctx: Context | None = OptionalCurrentContext(),
@@ -525,8 +516,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         extra = personas_mod.persona_system(persona_id)
         return await refine_generation_prompt(rough, ctx, persona_system_extra=extra)
 
-    @mcp.tool()
-    async def ahk_help(
+    async def _ahk_help(
         level: str = "quick",
         topic: str | None = None,
     ) -> dict[str, Any]:
@@ -543,8 +533,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             "available_levels": levels,
         }
 
-    @mcp.tool()
-    async def show_help() -> dict[str, Any]:
+    async def _show_help() -> dict[str, Any]:
         """
         Return URLs to open the help in a browser. Mini-help (server-rendered, one page) at /help;
         full webapp (SPA, sidebar, multiple pages) at port 10747 if web_sota is running.
@@ -559,8 +548,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             "message": f"Open {mini_help_url} for mini-help. Full webapp (Overview, Help, Chat, Scriptlets, Running, Status): {full_webapp_url} (run web_sota/start.ps1).",
         }
 
-    @mcp.tool()
-    async def promote_scriptlet(
+    async def _promote_scriptlet(
         script_id: str,
         category: str = "utilities",
         hotkeys: list[str] | None = None,
@@ -663,3 +651,133 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             "lint": lint,
             "message": f"Promoted {script_id} - now live in the dashboard, no restart needed.",
         }
+
+    @mcp.tool()
+    async def scriptlet_ops(
+        operation: Literal[
+            "list",
+            "run",
+            "stop",
+            "list_running",
+            "get_source",
+            "get_metadata",
+            "promote",
+        ],
+        script_id: str | None = None,
+        pid: int | None = None,
+        category: str = "utilities",
+        hotkeys: list[str] | None = None,
+        tags: list[str] | None = None,
+        priority: int = 20,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Scriptlet lifecycle management (portmanteau).
+
+        [RATIONALE]
+        Consolidates 7 related operations into a single tool to prevent tool explosion while enabling
+        full API coverage (fleet TOOL_DESIGN_STANDARDS.md SS1: portmanteau mandatory above ~20 tools).
+
+        ## Operations
+        - **list**: List all scriptlets in the depot (id, name, description, category, running)
+        - **run**: Launch a scriptlet by id. Requires `script_id`.
+        - **stop**: Stop a running scriptlet. Requires `script_id`; optional `pid` to target one instance.
+        - **list_running**: List currently running scriptlets with PID/source.
+        - **get_source**: Read full source of a scriptlet. Requires `script_id`.
+        - **get_metadata**: Read header metadata (@description, @hotkeys, etc). Requires `script_id`.
+        - **promote**: Move a script from ai_generated/ into the live depot and register it in
+          metadata.json, with persistence auto-fix, hotkey-collision check, and lint gate. Requires
+          `script_id`; optional `category`/`hotkeys`/`tags`/`priority`/`force`.
+
+        ## Return Format
+        {"success": bool, ...operation-specific fields}
+
+        ## Examples
+        await scriptlet_ops(operation="list")
+        await scriptlet_ops(operation="run", script_id="quick_notes")
+        await scriptlet_ops(operation="promote", script_id="blender_helper_popup", category="development", hotkeys=["^!y toggle"])
+        """
+        if operation == "list":
+            return await _list_scriptlets()
+        if operation == "run":
+            if not script_id:
+                return {"success": False, "error": "script_id is required for operation='run'"}
+            return await _run_scriptlet(script_id)
+        if operation == "stop":
+            if not script_id:
+                return {"success": False, "error": "script_id is required for operation='stop'"}
+            return await _stop_scriptlet(script_id, pid)
+        if operation == "list_running":
+            return await _list_running_scriptlets()
+        if operation == "get_source":
+            if not script_id:
+                return {"success": False, "error": "script_id is required for operation='get_source'"}
+            return await _get_scriptlet_source(script_id)
+        if operation == "get_metadata":
+            if not script_id:
+                return {"success": False, "error": "script_id is required for operation='get_metadata'"}
+            return await _get_scriptlet_metadata(script_id)
+        if operation == "promote":
+            if not script_id:
+                return {"success": False, "error": "script_id is required for operation='promote'"}
+            return await _promote_scriptlet(script_id, category, hotkeys, tags, priority, force)
+        return {"success": False, "error": f"Unknown operation: {operation!r}"}
+
+    @mcp.tool()
+    async def ahk_dev_ops(
+        operation: Literal[
+            "generate",
+            "list_prompts",
+            "refine_prompt",
+            "help",
+            "show_help",
+        ],
+        prompt: str | None = None,
+        filename: str | None = None,
+        category: str | None = None,
+        rough: str | None = None,
+        persona_id: str | None = None,
+        level: str = "quick",
+        topic: str | None = None,
+        ctx: Context | None = OptionalCurrentContext(),
+    ) -> dict[str, Any]:
+        """
+        AI-assisted AHK authoring and help (portmanteau).
+
+        [RATIONALE]
+        Consolidates 5 related operations into a single tool to prevent tool explosion while enabling
+        full API coverage (fleet TOOL_DESIGN_STANDARDS.md SS1: portmanteau mandatory above ~20 tools).
+
+        ## Operations
+        - **generate**: Generate a new AHK v2 script from a natural-language prompt, written to
+          scriptlets/ai_generated/ only. Requires `prompt`; optional `filename`. FastMCP sampling
+          first, localhost HTTP fallback. No file written on failure.
+        - **list_prompts**: List built-in preset prompts for `generate`. Optional `category` filter.
+        - **refine_prompt**: Turn a vague idea into a clear prompt for `generate`. Requires `rough`;
+          optional `persona_id`.
+        - **help**: Multilevel AutoHotkey v2 / autohotkey-mcp help. Optional `level` (quick | reference
+          | language | usage | tools | mcp_server) and `topic`.
+        - **show_help**: Return browser URLs for the mini-help page and the full webapp.
+
+        ## Return Format
+        {"success": bool, ...operation-specific fields} (help/show_help/list_prompts have no "success" key)
+
+        ## Examples
+        await ahk_dev_ops(operation="generate", prompt="a popup with Blender shortcuts")
+        await ahk_dev_ops(operation="help", level="quick")
+        """
+        if operation == "generate":
+            if not prompt:
+                return {"success": False, "error": "prompt is required for operation='generate'"}
+            return await _generate_scriptlet(prompt, filename, ctx)
+        if operation == "list_prompts":
+            return await _list_generation_prompts(category)
+        if operation == "refine_prompt":
+            if not rough:
+                return {"success": False, "error": "rough is required for operation='refine_prompt'"}
+            return await _refine_ahk_prompt(rough, persona_id, ctx)
+        if operation == "help":
+            return await _ahk_help(level, topic)
+        if operation == "show_help":
+            return await _show_help()
+        return {"success": False, "error": f"Unknown operation: {operation!r}"}

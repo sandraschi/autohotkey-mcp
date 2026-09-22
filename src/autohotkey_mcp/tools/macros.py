@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastmcp import FastMCP
 
@@ -77,12 +77,7 @@ def _save(preamble: str, macros: dict[str, str]) -> None:
 def register_macro_tools(mcp: FastMCP) -> None:
     """Register macro_list, macro_get, macro_upsert, macro_delete."""
 
-    @mcp.tool()
-    async def macro_list() -> dict[str, Any]:
-        """
-        List all //trigger macros defined in the SOP file (sop/macros.md), with each
-        template body and how many positional {n} placeholders it expects.
-        """
+    async def _macro_list() -> dict[str, Any]:
         _, macros = _load()
         items = []
         for name, body in macros.items():
@@ -95,27 +90,14 @@ def register_macro_tools(mcp: FastMCP) -> None:
             "sop_path": str(SOP_PATH),
         }
 
-    @mcp.tool()
-    async def macro_get(name: str) -> dict[str, Any]:
-        """Get a single //trigger macro's template by name."""
+    async def _macro_get(name: str) -> dict[str, Any]:
         _, macros = _load()
         name = name.strip().lower()
         if name not in macros:
             return {"success": False, "error": f"Macro '{name}' not found"}
         return {"success": True, "name": name, "template": macros[name]}
 
-    @mcp.tool()
-    async def macro_upsert(name: str, template: str) -> dict[str, Any]:
-        """
-        Create or update a //trigger macro in the SOP file. ``name`` must be lowercase
-        letters/digits/underscore only (it's what you type after //). ``template`` is
-        the expansion body -- use {1} {2} ... for positional params filled from args
-        typed after the macro name. macro_expander.ahk auto-reloads within a few
-        seconds of this write; no restart needed.
-
-        ## Return Format
-        {"success": bool, "name": str, "created": bool}
-        """
+    async def _macro_upsert(name: str, template: str) -> dict[str, Any]:
         name = name.strip().lower()
         if not _NAME_RE.match(name):
             return {
@@ -130,9 +112,7 @@ def register_macro_tools(mcp: FastMCP) -> None:
         _save(preamble, macros)
         return {"success": True, "name": name, "created": created}
 
-    @mcp.tool()
-    async def macro_delete(name: str) -> dict[str, Any]:
-        """Delete a //trigger macro from the SOP file."""
+    async def _macro_delete(name: str) -> dict[str, Any]:
         name = name.strip().lower()
         preamble, macros = _load()
         if name not in macros:
@@ -140,3 +120,48 @@ def register_macro_tools(mcp: FastMCP) -> None:
         del macros[name]
         _save(preamble, macros)
         return {"success": True, "deleted": True, "name": name}
+
+    @mcp.tool()
+    async def macro_ops(
+        operation: Literal["list", "get", "upsert", "delete"],
+        name: str | None = None,
+        template: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        //trigger macro SOP management (portmanteau).
+
+        [RATIONALE]
+        Consolidates 4 related operations into a single tool to prevent tool explosion while enabling
+        full API coverage (fleet TOOL_DESIGN_STANDARDS.md SS1: portmanteau mandatory above ~20 tools).
+        Macros are `//trigger` text-expansion templates used by macro_expander.ahk, stored in
+        sop/macros.md (single source of truth, polled and auto-reloaded by the AHK side).
+
+        ## Operations
+        - **list**: List all macros with template body and positional {n} placeholder count.
+        - **get**: Get one macro's template by name. Requires `name`.
+        - **upsert**: Create or update a macro. Requires `name` (lowercase letters/digits/underscore
+          only) and `template` (use {1} {2} ... for positional params).
+        - **delete**: Delete a macro. Requires `name`.
+
+        ## Return Format
+        {"success": bool, ...operation-specific fields}
+
+        ## Examples
+        await macro_ops(operation="list")
+        await macro_ops(operation="upsert", name="standup", template="Status: {1}. Blockers: {2}.")
+        """
+        if operation == "list":
+            return await _macro_list()
+        if operation == "get":
+            if not name:
+                return {"success": False, "error": "name is required for operation='get'"}
+            return await _macro_get(name)
+        if operation == "upsert":
+            if not name or template is None:
+                return {"success": False, "error": "name and template are required for operation='upsert'"}
+            return await _macro_upsert(name, template)
+        if operation == "delete":
+            if not name:
+                return {"success": False, "error": "name is required for operation='delete'"}
+            return await _macro_delete(name)
+        return {"success": False, "error": f"Unknown operation: {operation!r}"}
