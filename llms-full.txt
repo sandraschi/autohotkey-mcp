@@ -1,6 +1,6 @@
 # autohotkey-mcp — Full Reference
 
-> FastMCP 3.2.4 | Python 3.12+ | Ports 10746/10747 | AHK depot: autohotkey-tools
+> FastMCP 3.4.4+ | Python 3.12+ | Ports 10746/10747 | AHK depot: autohotkey-tools
 
 ## What it does
 
@@ -16,7 +16,7 @@ sampling (host LLM, e.g. Claude via Cursor) as primary path; localhost HTTP
 Claude Desktop / Cursor
     │  stdio (MCP)
     ▼
-autohotkey-mcp (FastMCP 3.2)
+autohotkey-mcp (FastMCP 3.4)
     ├── MCP tools (scriptlets, generate, help, prefab cards)
     ├── MCP prompts (generate/refine/debug/migrate/review)
     ├── MCP resources (ahk://prompts/*)
@@ -43,24 +43,26 @@ ScriptletCOMBridge.ahk (10764)  ← autohotkey-tools depot
     └── GET /dashboard   → HTML UI
 ```
 
-## MCP Tools (16)
+## MCP Tools (9, consolidated from 23 -- 2026-09-22 portmanteau refactor)
 
-### Scriptlet management
-- **list_scriptlets()** — list all scriptlets (bridge or depot scan); returns id, name, description, category, running
-- **run_scriptlet(script_id)** — run by id; bridge if up, else direct AHK + PID tracking
-- **stop_scriptlet(script_id, pid?)** — stop by id; optional pid for multi-instance direct runs
-- **list_running_scriptlets()** — live instances with hotkeys, description, PID, source
-- **get_scriptlet_source(script_id)** — full .ahk source from depot
-- **get_scriptlet_metadata(script_id)** — @key: value header fields
+### scriptlet_ops(operation, script_id?, pid?, category?, hotkeys?, tags?, priority?, force?)
+- **operation="list"** — list all scriptlets (bridge or depot scan); returns id, name, description, category, running
+- **operation="run"** — run by script_id; bridge if up, else direct AHK + PID tracking
+- **operation="stop"** — stop by script_id; optional pid for multi-instance direct runs
+- **operation="list_running"** — live instances with hotkeys, description, PID, source
+- **operation="get_source"** — full .ahk source from depot
+- **operation="get_metadata"** — @key: value header fields
+- **operation="promote"** — move ai_generated/<script_id>.ahk into the live depot + register in metadata.json; auto-fixes the silent-exit persistence bug, blocks on hotkey collision or lint error (force=True overrides)
 
-### AI generation
-- **generate_scriptlet(prompt, filename?)** — sampling-first generate; fallback localhost HTTP; writes to ai_generated/ after validation only
-- **refine_ahk_prompt(rough, persona_id?)** — turn vague idea into precise prompt; same sampling path
-- **list_generation_prompts(category?)** — preset prompt catalog (ids, titles, tags)
+### ahk_dev_ops(operation, prompt?, filename?, category?, rough?, persona_id?, level?, topic?)
+- **operation="generate"** — sampling-first generate; fallback localhost HTTP; writes to ai_generated/ after validation only
+- **operation="refine_prompt"** — turn vague idea into precise prompt; same sampling path
+- **operation="list_prompts"** — preset prompt catalog (ids, titles, tags)
+- **operation="help"** — markdown help; levels: quick|reference|language|usage|tools|mcp_server
+- **operation="show_help"** — returns URLs for mini-help and webapp
 
-### Help
-- **ahk_help(level?, topic?)** — markdown help; levels: quick|reference|language|usage|tools|mcp_server
-- **show_help()** — returns URLs for mini-help and webapp
+### macro_ops(operation, name?, template?)
+- **operation="list"|"get"|"upsert"|"delete"** — //trigger text-expansion macros in sop/macros.md, read by macro_expander.ahk in the depot
 
 ### Prefab UI cards (app=True)
 - **show_scriptlets_card()** — DataTable: all scriptlets, Dot status, Badge category, search+paginate
@@ -84,7 +86,7 @@ ScriptletCOMBridge.ahk (10764)  ← autohotkey-tools depot
 - **ahk://prompts/categories** — list of category strings
 - **ahk://prompts/{id}** — single preset or JSON error
 
-## FastMCP 3.2 Features Used
+## FastMCP 3.4 Features Used
 
 - `@mcp.tool(app=True)` + `ToolResult` + `PrefabApp` → inline Prefab UI cards
 - `@mcp.prompt()` → 5 conversation starters

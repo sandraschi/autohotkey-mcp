@@ -4,7 +4,7 @@
   <a href="https://github.com/casey/just"><img src="https://img.shields.io/badge/just-ready_to_go-7c5cfc?style=flat-square&logo=just&logoColor=white" alt="Just"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.13+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"></a>
-  <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.2-7c5cfc?style=flat-square" alt="FastMCP"></a>
+  <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.4-7c5cfc?style=flat-square" alt="FastMCP"></a>
 </p>
 
 
@@ -39,7 +39,7 @@
 | `AUTOHOTKEY_LLM_API_KEY` | (unset) | Optional Bearer token for local servers that require it. `OPENAI_API_KEY` is also read. |
 | `AUTOHOTKEY_LLM_TIMEOUT` | `120` | HTTP completion timeout (seconds). |
 
-**LLM architecture:** **FastMCP 3.2 sampling** (`Context.sample`) is the **primary** path for `generate_scriptlet` / `refine_ahk_prompt` inside MCP hosts (e.g. Cursor). **Local HTTP** (`AUTOHOTKEY_LLM_*`, Ollama/LM Studio) is the **fallback** when sampling is unavailable, and powers the **web SPA** Chat + generate form (browsers have no MCP context). No file is written if both paths fail or validation fails.
+**LLM architecture:** **FastMCP 3.4 sampling** (`Context.sample`) is the **primary** path for `generate_scriptlet` / `refine_ahk_prompt` inside MCP hosts (e.g. Cursor). **Local HTTP** (`AUTOHOTKEY_LLM_*`, Ollama/LM Studio) is the **fallback** when sampling is unavailable, and powers the **web SPA** Chat + generate form (browsers have no MCP context). No file is written if both paths fail or validation fails.
 
 **MCP resources (agents):** Preset prompt catalog is exposed as read-only resources: `ahk://prompts/catalog` (full JSON list), `ahk://prompts/categories`, `ahk://prompts/{prompt_id}` (one entry; JSON error if id unknown).
 
@@ -47,18 +47,28 @@
 
 ## Tools
 
-- **list_generation_prompts** – Preset prompt library (categories, tags) for ideation.
-- **refine_ahk_prompt** – Refine a vague idea into a clear prompt (sampling-first, same as generate).
-- **list_running_scriptlets** – Running instances with depot metadata (`@hotkeys`, `@description`); PIDs for MCP direct runs.
-- **stop_scriptlet** – Stop by id; optional `pid` to stop one instance when several copies of the same script are running (direct).
-- **list_scriptlets** – List scriptlets (from bridge `/scriptlets`); id, name, description, category, running.
-- **run_scriptlet** – Run a scriptlet by id (e.g. `quick_notes` → bridge `/run/quick_notes.ahk`).
-- **stop_scriptlet** – Stop a scriptlet by id.
-- **get_scriptlet_source** – Read full source from depot `scriptlets/<id>.ahk`.
-- **get_scriptlet_metadata** – Read header metadata (@description, @version, etc.) from depot.
-- **generate_scriptlet** – *(Sandbox)* Generate AHK v2 from a natural-language prompt via **MCP sampling** (when the client supports it) or **localhost OpenAI-compatible HTTP** (`AUTOHOTKEY_LLM_*`). Writes only to `scriptlets/ai_generated/` after validation; **no file on failure**. Review before promoting out of `ai_generated/`.
-- **ahk_help(level?, topic?)** – Multilevel help (markdown). level: `quick` | `reference` | `language` | `usage` | `tools` | `mcp_server`.
-- **show_help** – Returns URLs for mini-help (`/help`) and full webapp (10747). Use so the user can open the page in a browser.
+9 MCP tools total (consolidated from 23 in the 2026-09-22 portmanteau refactor — fleet TOOL_DESIGN_STANDARDS.md mandates this above ~20 tools):
+
+**`scriptlet_ops(operation, ...)`** — scriptlet lifecycle:
+- `list` – List scriptlets (from bridge `/scriptlets` or depot scan); id, name, description, category, running.
+- `run` – Run a scriptlet by id (e.g. `quick_notes` → bridge `/run/quick_notes.ahk`).
+- `stop` – Stop by id; optional `pid` to stop one instance when several copies of the same script are running (direct).
+- `list_running` – Running instances with depot metadata (`@hotkeys`, `@description`); PIDs for MCP direct runs.
+- `get_source` – Read full source from depot `scriptlets/<id>.ahk`.
+- `get_metadata` – Read header metadata (@description, @version, etc.) from depot.
+- `promote` – Move a script from `ai_generated/` into the live depot + register in `metadata.json`. Auto-fixes the silent-exit persistence bug, blocks on hotkey collisions and real lint errors (both overridable with `force=True`).
+
+**`ahk_dev_ops(operation, ...)`** — AI-assisted authoring & help:
+- `generate` – *(Sandbox)* Generate AHK v2 from a natural-language prompt via **MCP sampling** (when the client supports it) or **localhost OpenAI-compatible HTTP** (`AUTOHOTKEY_LLM_*`). Writes only to `scriptlets/ai_generated/` after validation; **no file on failure**. Review before promoting.
+- `list_prompts` – Preset prompt library (categories, tags) for ideation.
+- `refine_prompt` – Refine a vague idea into a clear prompt (sampling-first, same as generate).
+- `help` – Multilevel help (markdown). `level`: `quick` | `reference` | `language` | `usage` | `tools` | `mcp_server`.
+- `show_help` – Returns URLs for mini-help (`/help`) and full webapp (10747).
+
+**`macro_ops(operation, ...)`** — `//trigger` text-expansion macros (`sop/macros.md`, read by `macro_expander.ahk` in the depot):
+- `list` / `get` / `upsert` / `delete`
+
+Plus 6 individual `show_*_card()` Prefab UI tools (rich cards in Claude Desktop/Cursor) — call `ahk_dev_ops(operation="help", level="tools")` for the full reference with examples.
 
 ## Webapp (fleet-standard SPA)
 
@@ -79,7 +89,7 @@ Commands below assume the **repository root** unless noted.
 
 ## Run
 
-**Single process (FastMCP 3.2 dual transport):** stdio for Cursor/Claude and HTTP on 10746.
+**Single process (FastMCP 3.4 dual transport):** stdio for Cursor/Claude and HTTP on 10746.
 ```powershell
 uv sync
 uv run autohotkey-mcp

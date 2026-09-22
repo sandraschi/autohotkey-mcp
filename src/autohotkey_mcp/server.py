@@ -693,7 +693,7 @@ def main() -> None:
 
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="autohotkey-mcp (FastMCP 3.2)")
+    parser = argparse.ArgumentParser(description="autohotkey-mcp (FastMCP 3.4)")
     parser.add_argument(
         "--serve",
         action="store_true",

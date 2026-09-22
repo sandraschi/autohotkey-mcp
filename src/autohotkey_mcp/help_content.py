@@ -807,28 +807,32 @@ The depot's `ai_generated/README.md` summarises the review process.
 TOOLS = """\
 # autohotkey-mcp — Tool Reference
 
-## Scriptlet Management
+As of the 2026-09-22 portmanteau refactor, the 12 tools below (plus 4 macro
+tools) are consolidated into 3 tools with an `operation` argument, per fleet
+TOOL_DESIGN_STANDARDS.md (mandatory above ~20 tools; this repo had 23). The
+function names in each heading are the `operation` value, not a separate
+callable — e.g. what used to be `list_scriptlets()` is now
+`scriptlet_ops(operation="list")`.
 
-### list_scriptlets()
+## scriptlet_ops(operation, ...) — Scriptlet Management
+
+### operation="list"  (was list_scriptlets())
 
 Returns all scriptlets in the depot with metadata.
 
 **Source priority:** ScriptletCOMBridge (port 10764) → depot scan fallback
-**Returns:** Array of `{id, name, description, category, running, path}`
+**Returns:** `{"scriptlets": [{id, name, description, category, running, path}, ...]}`
 
 ```json
-[
-  {
-    "id": "quick_notes",
-    "name": "quick notes",
-    "description": "Floating sticky-note window",
-    "category": "productivity",
-    "running": false
-  }
-]
+scriptlet_ops(operation="list")
+→ {"scriptlets": [
+    {"id": "quick_notes", "name": "quick notes",
+     "description": "Floating sticky-note window",
+     "category": "productivity", "running": false}
+  ]}
 ```
 
-### run_scriptlet(script_id)
+### operation="run", script_id  (was run_scriptlet(script_id))
 
 Run a scriptlet by its id (filename stem without `.ahk`).
 
@@ -836,52 +840,66 @@ Run a scriptlet by its id (filename stem without `.ahk`).
 **Direct mode:** Spawns `AutoHotkey64.exe scriptlets/{id}.ahk`, tracks PID
 
 ```
-run_scriptlet("quick_notes")
+scriptlet_ops(operation="run", script_id="quick_notes")
 → {"success": true, "pid": 12345, "source": "direct"}
 ```
 
-### stop_scriptlet(script_id, pid?)
+### operation="stop", script_id, pid?  (was stop_scriptlet(script_id, pid?))
 
 Stop a running scriptlet. Pass `pid` when multiple instances of the same
 script are running under direct (non-bridge) mode.
 
 ```
-stop_scriptlet("quick_notes")          → stops first match
-stop_scriptlet("quick_notes", 12345)   → stops specific PID
+scriptlet_ops(operation="stop", script_id="quick_notes")           → stops first match
+scriptlet_ops(operation="stop", script_id="quick_notes", pid=12345) → stops specific PID
 ```
 
-### list_running_scriptlets()
+### operation="list_running"  (was list_running_scriptlets())
 
 Returns all currently active scriptlet instances with metadata.
 
 ```json
-[
-  {
-    "script_id": "quick_notes",
-    "pid": 12345,
-    "source": "direct",
-    "hotkeys": "Ctrl+Alt+N",
-    "description": "Floating sticky-note window"
-  }
-]
+scriptlet_ops(operation="list_running")
+→ {"instances": [
+    {"script_id": "quick_notes", "pid": 12345, "source": "direct",
+     "hotkeys": "Ctrl+Alt+N", "description": "Floating sticky-note window"}
+  ]}
 ```
 
-### get_scriptlet_source(script_id)
+### operation="get_source", script_id  (was get_scriptlet_source(script_id))
 
 Read the full `.ahk` source from depot. Checks `scriptlets/` then
 `scriptlets/ai_generated/`. Never uses bridge.
 
-### get_scriptlet_metadata(script_id)
+### operation="get_metadata", script_id  (was get_scriptlet_metadata(script_id))
 
 Read `@key: value` header fields from the file. Returns a dict of all
 recognised metadata fields (`name`, `description`, `version`, `category`,
 `hotkeys`, plus any custom fields).
 
+### operation="promote", script_id, category?, hotkeys?, tags?, priority?, force?
+
+Move a script from `scriptlets/ai_generated/` into the live depot and
+register it in `metadata.json` (the autohotkey-tools catalog the dashboard
+reads) — appears immediately, no bridge restart needed. Runs three checks
+first: **persistence** (auto-fixed — inserts `Persistent()` if the script
+only registers a dynamic `Hotkey()` with nothing else keeping AHK v2's
+auto-execute thread resident, otherwise the script silently exits ~51s
+after load), **hotkey collision** (blocking unless `force=True` — checked
+against every hotkey already registered), and **lint** (blocking unless
+`force=True` — via the sibling autohotkey-linter CLI, real errors only).
+
+```
+scriptlet_ops(operation="promote", script_id="blender_helper_popup",
+              category="development", hotkeys=["^!y toggle"])
+→ {"success": true, "persistence_auto_fixed": true, "lint": {"ok": true}, ...}
+```
+
 ---
 
-## AI Generation
+## ahk_dev_ops(operation, ...) — AI Generation & Help
 
-### generate_scriptlet(prompt, filename?)
+### operation="generate", prompt, filename?  (was generate_scriptlet(prompt, filename?))
 
 Generate a new AHK v2 script from a natural-language prompt.
 
@@ -894,31 +912,32 @@ local model required.
 
 **Output:** Written to `scriptlets/ai_generated/{filename}.ahk` only
 after validation. Nothing written on failure. Returns `script_id` of
-the saved file.
+the saved file. Auto-fixes the same silent-exit persistence bug
+`operation="promote"` checks for, so a freshly generated script already
+works standalone before you even promote it.
 
 ```
-generate_scriptlet(
-  "Hotkey Ctrl+Alt+P that pastes the current date in ISO format"
-)
+ahk_dev_ops(operation="generate",
+  prompt="Hotkey Ctrl+Alt+P that pastes the current date in ISO format")
 → {"success": true, "script_id": "paste_iso_date", "path": "..."}
 ```
 
-**Review generated scripts before running** — see the Usage tab.
+**Review generated scripts before promoting** — see the Usage tab.
 
-### refine_ahk_prompt(rough, persona_id?)
+### operation="refine_prompt", rough, persona_id?  (was refine_ahk_prompt(rough, persona_id?))
 
 Turn a vague idea into a precise, unambiguous prompt ready for
-`generate_scriptlet`. Useful when you know what you want but can't
+`operation="generate"`. Useful when you know what you want but can't
 phrase it technically.
 
 ```
-refine_ahk_prompt("make a thing that keeps my screen awake")
+ahk_dev_ops(operation="refine_prompt", rough="make a thing that keeps my screen awake")
 → "Create an AHK v2 scriptlet that prevents screensaver/sleep by
    sending a harmless keypress (e.g. Shift) every 4 minutes using
    SetTimer. Include a tray menu to enable/disable. Category: system."
 ```
 
-### list_generation_prompts(category?)
+### operation="list_prompts", category?  (was list_generation_prompts(category?))
 
 Returns the built-in prompt catalog — 40+ preset ideas with id, title,
 tags, and the full prompt text. Filter by category or browse all.
@@ -926,11 +945,7 @@ tags, and the full prompt text. Filter by category or browse all.
 Categories: `productivity`, `system`, `clipboard`, `windows`, `gui`,
 `games`, `files`, `mcp`, `fun`
 
----
-
-## Help
-
-### ahk_help(level?, topic?)
+### operation="help", level?, topic?  (was ahk_help(level?, topic?))
 
 Return help documentation as Markdown.
 
@@ -943,10 +958,24 @@ Return help documentation as Markdown.
 | `tools` | This page — all MCP tools with examples |
 | `mcp_server` | Server config, ports, env vars, Claude Desktop setup |
 
-### show_help()
+### operation="show_help"  (was show_help())
 
 Returns clickable URLs for the mini-help page (`/help`) and the full
 webapp (`http://127.0.0.1:10747`).
+
+---
+
+## macro_ops(operation, ...) — //trigger Text-Expansion Macros
+
+Was `macro_list()` / `macro_get(name)` / `macro_upsert(name, template)` /
+`macro_delete(name)` — now `operation="list" | "get" | "upsert" | "delete"`,
+with `name` and `template` as needed per operation. Manages `sop/macros.md`,
+read by `macro_expander.ahk` in the depot (auto-reloads within seconds of
+any edit, no restart needed).
+
+```
+macro_ops(operation="upsert", name="standup", template="Status: {1}. Blockers: {2}.")
+```
 
 ---
 
@@ -1013,8 +1042,8 @@ MCP_SERVER = """\
 Claude Desktop / Cursor (MCP host)
     │  stdio transport (auto-detected when stdin is a pipe)
     ▼
-autohotkey-mcp  (FastMCP 3.2.4)
-    ├── 16 MCP tools
+autohotkey-mcp  (FastMCP 3.4.4+)
+    ├── 9 MCP tools
     ├── 5 MCP prompts  (@mcp.prompt)
     ├── 3 MCP resources  (ahk://prompts/*)
     ├── SkillsDirectoryProvider  (.cursor/skills/)

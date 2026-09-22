@@ -20,11 +20,11 @@ Shows a "CUA at work" blinking red HUD while scriptlets are running.
 
 ## Tools
 
-- list_scriptlets, run_scriptlet, stop_scriptlet
-- get_scriptlet_source, get_scriptlet_metadata
-- generate_scriptlet, refine_ahk_prompt
-- list_running_scriptlets, list_generation_prompts
-- ahk_help, show_help
+9 total (consolidated from 23, see TOOL_DESIGN_STANDARDS.md portmanteau rule):
+
+- scriptlet_ops(operation="list"|"run"|"stop"|"list_running"|"get_source"|"get_metadata"|"promote")
+- ahk_dev_ops(operation="generate"|"list_prompts"|"refine_prompt"|"help"|"show_help")
+- macro_ops(operation="list"|"get"|"upsert"|"delete")
 - show_scriptlets_card, show_running_scriptlets_card
 - show_ahk_help_card, show_scriptlet_detail_card
 - show_generation_result_card, show_server_status_card
