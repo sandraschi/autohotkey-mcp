@@ -9,7 +9,7 @@
 - Expose scriptlet operations as MCP tools for use from IDEs and chat clients.
 - Provide a fleet-standard webapp (retractable sidebar, multiple pages) for help, scriptlets, **Chat** (personas, presets, refine), **Running** (live instances, kill), and status.
 - Keep a single backend (FastAPI) for MCP-over-HTTP, bridge-style `POST /tool`, and webapp APIs; Vite SPA as the primary web UI on **10747**.
-- Integrate with autohotkey-test depot and ScriptletCOMBridge (port **10744**) without duplicating bridge logic.
+- Integrate with autohotkey-test depot and ScriptletCOMBridge (port **10764**) without duplicating bridge logic.
 - Expose the preset prompt library as **MCP resources** (`ahk://prompts/...`) for agents.
 
 ## Scope

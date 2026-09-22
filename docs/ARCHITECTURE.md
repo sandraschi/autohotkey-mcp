@@ -20,7 +20,7 @@ graph TD
 A dedicated repository containing `.ahk` files organized by category. The MCP server reads metadata from headers (e.g., `@description`, `@hotkeys`) to present a structured catalog to the agent.
 
 ### 2. ScriptletCOMBridge
-A lightweight C# or AHK-based middle-layer (running on port 10744) that provides stable process management and hotkey registration. The MCP server prefers using this bridge but can fallback to direct `AutoHotkey.exe` execution.
+A lightweight C# or AHK-based middle-layer (running on port 10764) that provides stable process management and hotkey registration. The MCP server prefers using this bridge but can fallback to direct `AutoHotkey.exe` execution.
 
 ### 3. MCP Server (FastMCP 3.1)
 The primary intelligence layer. It implements:
@@ -32,7 +32,7 @@ The primary intelligence layer. It implements:
 
 - **Port 10746**: Backend API (FastAPI) and MCP HTTP transport.
 - **Port 10747**: Frontend React SPA (Vite).
-- **Port 10744**: Outbound to ScriptletCOMBridge.
+- **Port 10764**: Outbound to ScriptletCOMBridge.
 
 ## Safety & Sandboxing
 

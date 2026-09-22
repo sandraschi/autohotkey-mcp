@@ -15,7 +15,7 @@
 | | |
 |--:|--|
 | **You might use this if…** | You already keep scriptlets in a depot (e.g. [autohotkey-test](https://github.com/sandraschi/autohotkey-test)), use Cursor or another MCP client, and want one place to drive hotkey utilities from conversation without juggling files by hand. |
-| **What it connects to** | Your script folder on disk and, when you want it, **ScriptletCOMBridge** on port **10744** for the same list/run/stop behavior as your dashboard. |
+| **What it connects to** | Your script folder on disk and, when you want it, **ScriptletCOMBridge** on port **10764** for the same list/run/stop behavior as your dashboard. |
 
 **Repo:** [github.com/sandraschi/autohotkey-mcp](https://github.com/sandraschi/autohotkey-mcp) · standalone (not under RoboFang `hands/`). **Glama:** [`glama.json`](glama.json) at repo root for marketplace metadata.
 
@@ -23,13 +23,13 @@
 
 - **Script depot:** clone of autohotkey-test (default `d:/dev/repos/autohotkey-test` or set `AUTOHOTKEY_SCRIPT_DEPOT`).
 - **AutoHotkey v2** installed (for direct run when bridge is not used). Set `AUTOHOTKEY_EXE` if not in default install path.
-- **Optional:** ScriptletCOMBridge (autohotkey-test) on `http://127.0.0.1:10744` — when running, list/run/stop use the bridge; when not, MCP scans the depot and runs AHK directly.
+- **Optional:** ScriptletCOMBridge (autohotkey-test) on `http://127.0.0.1:10764` — when running, list/run/stop use the bridge; when not, MCP scans the depot and runs AHK directly.
 
 ## Config
 
 | Env | Default | Description |
 |-----|--------|-------------|
-| `AUTOHOTKEY_BRIDGE_URL` | `http://127.0.0.1:10744` | ScriptletCOMBridge base URL (optional; fallback: direct depot + AHK run) |
+| `AUTOHOTKEY_BRIDGE_URL` | `http://127.0.0.1:10764` | ScriptletCOMBridge base URL (optional; fallback: direct depot + AHK run) |
 | `AUTOHOTKEY_SCRIPT_DEPOT` | `d:/dev/repos/autohotkey-test` | Path to repo containing `scriptlets/` |
 | `AUTOHOTKEY_EXE` | (auto-detect) | Path to AutoHotkey v2 exe when using direct run (no bridge) |
 | `AUTOHOTKEY_MCP_HTTP` | (auto) | Set to `0` to force stdio-only. When unset, stdio-only if stdin is a pipe (Cursor/IDE). |

@@ -32,7 +32,7 @@ Shows a "CUA at work" blinking red HUD while scriptlets are running.
 ## Config
 
 - AUTOHOTKEY_SCRIPT_DEPOT: path to autohotkey-test depot
-- AUTOHOTKEY_BRIDGE_URL: ScriptletCOMBridge base URL (default http://127.0.0.1:10744)
+- AUTOHOTKEY_BRIDGE_URL: ScriptletCOMBridge base URL (default http://127.0.0.1:10764)
 - AUTOHOTKEY_EXE: path to AutoHotkey v2 exe
 - PORT: backend port (default 10746)
 - AUTOHOTKEY_LLM_BASE_URL / AUTOHOTKEY_LLM_MODEL: local LLM for HTTP fallback

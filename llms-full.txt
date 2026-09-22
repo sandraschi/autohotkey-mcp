@@ -5,7 +5,7 @@
 ## What it does
 
 Exposes AutoHotkey v2 scriptlet management as MCP tools. Connects to the
-ScriptletCOMBridge (AHK HTTP server on 10744) when running, falls back to
+ScriptletCOMBridge (AHK HTTP server on 10764) when running, falls back to
 direct depot scan + subprocess AHK launch. AI script generation uses FastMCP
 sampling (host LLM, e.g. Claude via Cursor) as primary path; localhost HTTP
 (Ollama/LM Studio) as fallback.
@@ -36,7 +36,7 @@ autohotkey-mcp (FastMCP 3.2)
         ├── Prefab Tools (invoke all 6 prefab tools)
         └── Status
 
-ScriptletCOMBridge.ahk (10744)  ← autohotkey-test depot
+ScriptletCOMBridge.ahk (10764)  ← autohotkey-test depot
     ├── GET /scriptlets  → JSON array
     ├── GET /run/:name   → start .ahk
     ├── GET /stop/:name  → stop .ahk
@@ -97,7 +97,7 @@ ScriptletCOMBridge.ahk (10744)  ← autohotkey-test depot
 | Variable | Default | Description |
 |----------|---------|-------------|
 | AUTOHOTKEY_SCRIPT_DEPOT | d:/dev/repos/autohotkey-test | Depot root (must contain scriptlets/) |
-| AUTOHOTKEY_BRIDGE_URL | http://127.0.0.1:10744 | ScriptletCOMBridge base URL |
+| AUTOHOTKEY_BRIDGE_URL | http://127.0.0.1:10764 | ScriptletCOMBridge base URL |
 | AUTOHOTKEY_EXE | (auto-detect) | AHK v2 exe path |
 | AUTOHOTKEY_MCP_HTTP | (auto) | 0 = force stdio-only |
 | PORT | 10746 | Backend port |
@@ -145,5 +145,5 @@ GET http://127.0.0.1:10746/health
 
 ## Related
 
-- **autohotkey-test** — AHK scriptlet depot; ScriptletCOMBridge on 10744
+- **autohotkey-test** — AHK scriptlet depot; ScriptletCOMBridge on 10764
 - **pywinauto-mcp** — native Windows UI automation via UIA tree; complements AHK
