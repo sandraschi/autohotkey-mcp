@@ -34,6 +34,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added (pattern)
 
 - **Mini-help:** `GET /help` — single server-rendered HTML page (same content as SPA Help, no npm). Lightweight alternative when running backend only. Documented as [MINI_HELP_PATTERN.md](docs/MINI_HELP_PATTERN.md) for reuse by other MCPs.
+- **`lhm.plugin.json`** at repo root for LobeHub MCP marketplace listing (analog to `glama.json`), describing all 9 tools with real input schemas.
+
+### Changed (2026-09-22 portmanteau refactor)
+
+- **9 MCP tools total, down from 23** (fleet TOOL_DESIGN_STANDARDS.md §1 mandates portmanteau above ~20 tools):
+  - `scriptlet_ops(operation="list"|"run"|"stop"|"list_running"|"get_source"|"get_metadata"|"promote")` replaces the 6 individually-decorated tools of the same names, plus adds **`promote`** (new — moves a script from `ai_generated/` into the live depot, auto-fixes the silent-exit persistence bug, blocks on hotkey collision or lint error, `force=True` overrides).
+  - `ahk_dev_ops(operation="generate"|"list_prompts"|"refine_prompt"|"help"|"show_help")` replaces `generate_scriptlet`, `list_generation_prompts`, `refine_ahk_prompt`, `ahk_help`, `show_help`.
+  - `macro_ops(operation="list"|"get"|"upsert"|"delete")` replaces the 4 individual macro tools.
+- **`AUTOHOTKEY_SCRIPT_DEPOT` is no longer required** for the common case: `depot.py` auto-detects a sibling `../autohotkey-tools` checkout. The env var still wins when set (portability fix — the old default silently assumed `D:\Dev\repos\...`, which only worked on one machine).
+- AI-generated scriptlets now get their silent-exit persistence bug (missing `Persistent()`/`SetTimer()`/shown `Gui` — process exits ~51s after load with no error) auto-fixed before being written.
+
+### Fixed
+
+- **Scriptlets webapp page showed 404 / blank.** Two independent bugs, both introduced by the portmanteau refactor above and only caught later:
+  - Backend: `GET /api/scriptlets`, `POST /api/run_scriptlet`, `POST /api/stop_scriptlet`, and `GET /status` still called the deleted tool names (`list_scriptlets`, `run_scriptlet`, `stop_scriptlet`) via `mcp.call_tool(...)` instead of `scriptlet_ops(operation=...)`. Every call threw, was caught, and returned an empty/error response.
+  - Frontend: `scriptlets.tsx` used `<Link>` (react-router-dom) without importing it, crashing the whole page with `ReferenceError: Link is not defined` and no error boundary.
+- **Backend crashed mid-session (`Tcl_AsyncDelete: async handler deleted by the wrong thread`, exit code 3) while scriptlets were running.** `CuaHUD` had two Tkinter cross-thread violations: `stop()` called `root.quit()`/`root.destroy()` from the caller's thread instead of the HUD's own thread, and the blink loop ran on a separate `threading.Thread` calling `.configure()` directly. Both now route through `root.after()` polling on the Tk-owning thread only.
 
 ### Removed
 
