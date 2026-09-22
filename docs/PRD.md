@@ -2,14 +2,14 @@
 
 ## Overview
 
-**autohotkey-mcp** is an MCP (Model Context Protocol) server that exposes AutoHotkey v2 scriptlets to AI clients (e.g. Cursor, Claude Desktop). It uses a local **ScriptletCOMBridge** (HTTP) and a **script depot** (autohotkey-test repo) to list, run, stop, and inspect scriptlets, and optionally generate new scripts in a sandbox. **FastMCP 3.1** sampling is the primary path for AI-assisted generation; localhost OpenAI-compatible HTTP backs the web UI and fallback.
+**autohotkey-mcp** is an MCP (Model Context Protocol) server that exposes AutoHotkey v2 scriptlets to AI clients (e.g. Cursor, Claude Desktop). It uses a local **ScriptletCOMBridge** (HTTP) and a **script depot** (autohotkey-tools repo) to list, run, stop, and inspect scriptlets, and optionally generate new scripts in a sandbox. **FastMCP 3.1** sampling is the primary path for AI-assisted generation; localhost OpenAI-compatible HTTP backs the web UI and fallback.
 
 ## Goals
 
 - Expose scriptlet operations as MCP tools for use from IDEs and chat clients.
 - Provide a fleet-standard webapp (retractable sidebar, multiple pages) for help, scriptlets, **Chat** (personas, presets, refine), **Running** (live instances, kill), and status.
 - Keep a single backend (FastAPI) for MCP-over-HTTP, bridge-style `POST /tool`, and webapp APIs; Vite SPA as the primary web UI on **10747**.
-- Integrate with autohotkey-test depot and ScriptletCOMBridge (port **10764**) without duplicating bridge logic.
+- Integrate with autohotkey-tools depot and ScriptletCOMBridge (port **10764**) without duplicating bridge logic.
 - Expose the preset prompt library as **MCP resources** (`ahk://prompts/...`) for agents.
 
 ## Scope
@@ -26,14 +26,14 @@
 
 ### Out of scope
 
-- Running or hosting ScriptletCOMBridge (handled by autohotkey-test / user).
+- Running or hosting ScriptletCOMBridge (handled by autohotkey-tools / user).
 - Editing scriptlet source in the webapp (view/list/generate sandbox only).
 - Multi-user or auth (local/single-user only).
 - Packaging as a system service (user runs via uv/just/start.ps1).
 
 ## Non-goals
 
-- Replacing autohotkey-test or ScriptletCOMBridge; this server is a client of both.
+- Replacing autohotkey-tools or ScriptletCOMBridge; this server is a client of both.
 - Full IDE inside the webapp; the webapp is for help, scriptlets, chat-assisted generation, and runtime visibility.
 
 ## Success criteria

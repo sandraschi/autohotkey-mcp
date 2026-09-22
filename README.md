@@ -14,23 +14,23 @@
 
 | | |
 |--:|--|
-| **You might use this if…** | You already keep scriptlets in a depot (e.g. [autohotkey-test](https://github.com/sandraschi/autohotkey-test)), use Cursor or another MCP client, and want one place to drive hotkey utilities from conversation without juggling files by hand. |
+| **You might use this if…** | You already keep scriptlets in a depot (e.g. [autohotkey-tools](https://github.com/sandraschi/autohotkey-tools)), use Cursor or another MCP client, and want one place to drive hotkey utilities from conversation without juggling files by hand. |
 | **What it connects to** | Your script folder on disk and, when you want it, **ScriptletCOMBridge** on port **10764** for the same list/run/stop behavior as your dashboard. |
 
 **Repo:** [github.com/sandraschi/autohotkey-mcp](https://github.com/sandraschi/autohotkey-mcp) · standalone (not under RoboFang `hands/`). **Glama:** [`glama.json`](glama.json) at repo root for marketplace metadata.
 
 ## Prerequisites
 
-- **Script depot:** clone of autohotkey-test (default `d:/dev/repos/autohotkey-test` or set `AUTOHOTKEY_SCRIPT_DEPOT`).
+- **Script depot:** clone [autohotkey-tools](https://github.com/sandraschi/autohotkey-tools) as a sibling of this repo (`../autohotkey-tools`) and it's found automatically; otherwise set `AUTOHOTKEY_SCRIPT_DEPOT` to its path explicitly.
 - **AutoHotkey v2** installed (for direct run when bridge is not used). Set `AUTOHOTKEY_EXE` if not in default install path.
-- **Optional:** ScriptletCOMBridge (autohotkey-test) on `http://127.0.0.1:10764` — when running, list/run/stop use the bridge; when not, MCP scans the depot and runs AHK directly.
+- **Optional:** ScriptletCOMBridge (autohotkey-tools) on `http://127.0.0.1:10764` — when running, list/run/stop use the bridge; when not, MCP scans the depot and runs AHK directly.
 
 ## Config
 
 | Env | Default | Description |
 |-----|--------|-------------|
 | `AUTOHOTKEY_BRIDGE_URL` | `http://127.0.0.1:10764` | ScriptletCOMBridge base URL (optional; fallback: direct depot + AHK run) |
-| `AUTOHOTKEY_SCRIPT_DEPOT` | `d:/dev/repos/autohotkey-test` | Path to repo containing `scriptlets/` |
+| `AUTOHOTKEY_SCRIPT_DEPOT` | auto-detected sibling `../autohotkey-tools` | Path to repo containing `scriptlets/` |
 | `AUTOHOTKEY_EXE` | (auto-detect) | Path to AutoHotkey v2 exe when using direct run (no bridge) |
 | `AUTOHOTKEY_MCP_HTTP` | (auto) | Set to `0` to force stdio-only. When unset, stdio-only if stdin is a pipe (Cursor/IDE). |
 | `PORT` | `10746` | Backend port (fleet 10700–10800) |
@@ -99,7 +99,7 @@ Or: `just run` / `just server`.
 | **[autohotkey-mcp]** (this) | AHK scriptlet manager — list, run, stop, generate `.ahk` scripts | You have a **depot of AHK scripts** and want to fire them from chat. Best for **legacy automation**, **raw input recording/replay**, **low-level mouse/keyboard macros**, and apps that don't expose UIA. |
 | **[pywinauto-mcp]** | Native Windows GUI automation — UIA element tree, screenshots, OCR, mouse/keyboard portmanteau | You need to **inspect controls, click buttons, read text** from modern Windows apps with accessibility trees. Best for **structured UI automation** where element IDs exist. |
 
-**Overlap:** both control Windows input. **Use AHK** for raw low-level recording/replay (use `autohotkey-test`'s built-in recorder). **Use pywinauto** when you need UIA element tree access, OCR, or structured window state capture.
+**Overlap:** both control Windows input. **Use AHK** for raw low-level recording/replay (use `autohotkey-tools`'s built-in recorder). **Use pywinauto** when you need UIA element tree access, OCR, or structured window state capture.
 
 **Together:** you can run both. `autohotkey-mcp` throws up a **"CUA at work" HUD** (blinking red overlay + e-stop button) while any scriptlet is running.
 

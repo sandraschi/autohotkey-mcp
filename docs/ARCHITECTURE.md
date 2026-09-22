@@ -12,11 +12,11 @@ graph TD
     Client -->|HTTP| Backend[FastAPI Backend]
     Server -->|Bridge API| COMBridge[ScriptletCOMBridge]
     COMBridge -->|COM/Shell| AHK[AutoHotkey v2 Processes]
-    Server -->|Disk IO| Depot[Scriptlet Depot / autohotkey-test]
+    Server -->|Disk IO| Depot[Scriptlet Depot / autohotkey-tools]
     Backend -->|Dual Transport| Server
 ```
 
-### 1. The Depot (`autohotkey-test`)
+### 1. The Depot (`autohotkey-tools`)
 A dedicated repository containing `.ahk` files organized by category. The MCP server reads metadata from headers (e.g., `@description`, `@hotkeys`) to present a structured catalog to the agent.
 
 ### 2. ScriptletCOMBridge
