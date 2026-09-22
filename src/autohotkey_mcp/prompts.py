@@ -19,7 +19,7 @@ def register_prompts(mcp: FastMCP) -> None:
         Scaffold a complete AutoHotkey v2 scriptlet from a natural-language description.
         Use this prompt to generate a production-ready .ahk file for the scriptlet depot.
         """
-        return f"""You are an AutoHotkey v2 expert generating a scriptlet for the autohotkey-test depot.
+        return f"""You are an AutoHotkey v2 expert generating a scriptlet for the autohotkey-tools depot.
 
 Generate a complete, working AutoHotkey v2 script for: {description}
 
@@ -38,7 +38,7 @@ Generate a complete, working AutoHotkey v2 script for: {description}
 
 **v2 rules** (no exceptions):
 - `Hotkey("^!c", FnName)` not `^!c::`
-- `MsgBox("text", "title", "Icon!")` — 3 params, no timeout in v2 (use TrayTip)
+- `MsgBox("text", "title", "Icon!")` - 3 params, no timeout in v2 (use TrayTip)
 - `StrUpper(s)` / `StrLower(s)` not `.ToUpper()`
 - `out := Random(1, 100)` not `Random, out, 1, 100`
 - `Loop N {{ }}` not `Loop, N`
@@ -74,7 +74,7 @@ Your refined prompt should specify:
 4. **Edge cases**: what happens if the target window is missing, clipboard is empty, etc.
 5. **Category**: one of hotkeys/gui/clipboard/files/windows/strings/system/productivity/games/testing/network
 
-Output only the refined prompt text — concise, specific, ready to pass to generate_scriptlet.
+Output only the refined prompt text - concise, specific, ready to pass to generate_scriptlet.
 """
 
     @mcp.prompt()

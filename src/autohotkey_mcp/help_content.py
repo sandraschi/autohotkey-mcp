@@ -25,7 +25,7 @@ compared to legacy v1.
 
 **autohotkey-mcp** lets your AI assistant manage scriptlets:
 
-- List, run, stop scriptlets from the depot (`autohotkey-test`)
+- List, run, stop scriptlets from the depot (`autohotkey-tools`)
 - Inspect source and header metadata
 - AI-generate new AHK v2 scripts (FastMCP sampling → Ollama/LM Studio fallback)
 - Refine vague ideas into precise AHK prompts
@@ -1035,7 +1035,7 @@ autohotkey-mcp  (FastMCP 3.2.4)
         ├── Prefab Tools (invoke all 6 tools)
         └── Status (server health)
 
-ScriptletCOMBridge.ahk  :10764  (autohotkey-test)
+ScriptletCOMBridge.ahk  :10764  (autohotkey-tools)
     ├── GET /scriptlets → JSON array
     ├── GET /run/:name  → spawn .ahk
     ├── GET /stop/:name → kill .ahk
@@ -1088,7 +1088,7 @@ runs stdio-only** — no HTTP, no port 10746 bind. Set
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AUTOHOTKEY_SCRIPT_DEPOT` | `d:/dev/repos/autohotkey-test` | Root of the AHK depot (must contain `scriptlets/`) |
+| `AUTOHOTKEY_SCRIPT_DEPOT` | auto-detected sibling `../autohotkey-tools` | Root of the AHK depot (must contain `scriptlets/`) |
 | `AUTOHOTKEY_BRIDGE_URL` | `http://127.0.0.1:10764` | ScriptletCOMBridge base URL |
 | `AUTOHOTKEY_EXE` | (auto-detect) | Path to `AutoHotkey64.exe` for direct runs |
 | `AUTOHOTKEY_MCP_HTTP` | (auto) | `1` = force HTTP on PORT; `0` = force stdio-only |
@@ -1155,16 +1155,17 @@ curl http://127.0.0.1:10764/status
 
 - **WEBAPP_PORTS.md:** 10764 (bridge), 10746 (backend), 10747 (frontend)
 - **FLEET_INDEX.md:** `autohotkey-mcp` — AHK Scriptlet Hub v0.2.0
-- **starts/:** `autohotkey-mcp-start.bat`, `autohotkey-test-start.bat`
+- **starts/:** `autohotkey-mcp-start.bat`, `autohotkey-tools-start.bat`
 - **glama.json:** marketplace metadata at repo root
 - **llms.txt / llms-full.txt:** agent-readable documentation
 
-## Depot: autohotkey-test
+## Depot: autohotkey-tools
 
-The scriptlet depot is a separate repo at `D:\\Dev\\repos\\autohotkey-test`.
+The scriptlet depot is a separate repo, found automatically when cloned as a sibling
+of this one (`../autohotkey-tools`); set `AUTOHOTKEY_SCRIPT_DEPOT` to override.
 
 ```
-autohotkey-test/
+autohotkey-tools/
 ├── ScriptletCOMBridge.ahk   HTTP bridge on :10764
 ├── start.bat / start.ps1    fleet-standard launcher
 ├── scriptlets/              75+ .ahk files
@@ -1175,7 +1176,7 @@ autohotkey-test/
 └── docs/                    syntax guide, bugbash reports
 ```
 
-Start the depot: `D:\\Dev\\repos\\mcp-central-docs\\starts\\autohotkey-test-start.bat`
+Start the depot: `D:\\Dev\\repos\\mcp-central-docs\\starts\\autohotkey-tools-start.bat`
 
 When the bridge is running, `list_scriptlets` / `run_scriptlet` /
 `stop_scriptlet` route through it. When it's not, autohotkey-mcp scans

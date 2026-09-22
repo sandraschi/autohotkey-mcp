@@ -1,7 +1,7 @@
 # autohotkey-mcp — Claude Code Guide
 
 ## Overview
-MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata, AI generation (sampling), prefab UI cards, MCP prompts. Uses ScriptletCOMBridge and autohotkey-test repo as depot.
+MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata, AI generation (sampling), prefab UI cards, MCP prompts. Uses ScriptletCOMBridge and autohotkey-tools repo as depot.
 
 ## Entry Points
 - `uv run autohotkey-mcp` → `autohotkey_mcp.server:main`
