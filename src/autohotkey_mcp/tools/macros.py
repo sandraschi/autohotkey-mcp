@@ -16,11 +16,13 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
+from autohotkey_mcp.depot import resolve_depot_path
+
+DEPOT = resolve_depot_path()
 SOP_PATH = DEPOT / "sop" / "macros.md"
 
 _DEFAULT_PREAMBLE = (
-    "# Macro SOP — //trigger definitions for macro_expander.ahk\n\n"
+    "# Macro SOP - //trigger definitions for macro_expander.ahk\n\n"
     "Each `## name` heading below is a macro. Typing `//name arg1 arg2` then\n"
     "Tab or Enter (in any app) expands it using the body text as a template.\n\n"
     "- `{1}`, `{2}`, ... are positional parameters, filled from space-separated\n"

@@ -52,10 +52,12 @@ from prefab_ui.components import (
     Text,
 )
 
+from autohotkey_mcp.depot import resolve_depot_path
+
 logger = logging.getLogger(__name__)
 
 BRIDGE_URL = os.getenv("AUTOHOTKEY_BRIDGE_URL", "http://127.0.0.1:10764").rstrip("/")
-DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
+DEPOT = resolve_depot_path()
 PORT = os.getenv("PORT", "10746")
 
 _CAT_VARIANT: dict[str, str] = {

@@ -27,11 +27,12 @@ from autohotkey_mcp import help_content, prompt_catalog
 from autohotkey_mcp import personas as personas_mod
 from autohotkey_mcp.ahk_llm import apply_persistence_fix, needs_persistence_fix
 from autohotkey_mcp.cua_hud import CuaHUD
+from autohotkey_mcp.depot import resolve_depot_path
 from autohotkey_mcp.prompt_refine import refine_generation_prompt
 from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
 
 BRIDGE_URL = os.getenv("AUTOHOTKEY_BRIDGE_URL", "http://127.0.0.1:10764").rstrip("/")
-DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
+DEPOT = resolve_depot_path()
 SCRIPTLETS_DIR = DEPOT / "scriptlets"
 AI_GENERATED_DIR = SCRIPTLETS_DIR / "ai_generated"
 
@@ -236,12 +237,12 @@ def _used_hotkey_tokens(plugins: dict[str, Any]) -> dict[str, list[str]]:
 
 
 def _find_ahk_linter_cli() -> Path | None:
-    """Locate the sibling ahk-linter repo's CLI (D:\\Dev\\repos\\ahk-linter\\ahk_lint.py by default)."""
+    """Locate the sibling autohotkey-linter repo's CLI (../autohotkey-linter/ahk_lint.py by default)."""
     override = os.getenv("AHK_LINTER_PATH")
     candidates: list[Path] = []
     if override:
         candidates.append(Path(override))
-    candidates.append(DEPOT.parent / "ahk-linter" / "ahk_lint.py")
+    candidates.append(DEPOT.parent / "autohotkey-linter" / "ahk_lint.py")
     for p in candidates:
         if p.exists():
             return p
@@ -252,7 +253,7 @@ def _run_ahk_lint(path: Path) -> dict[str, Any]:
     """Lint one file via the sibling ahk-lint CLI. Returns ok=True (skipped) if the linter isn't found."""
     linter = _find_ahk_linter_cli()
     if not linter:
-        return {"ok": True, "skipped": True, "reason": "ahk-linter not found (set AHK_LINTER_PATH)"}
+        return {"ok": True, "skipped": True, "reason": "autohotkey-linter not found (set AHK_LINTER_PATH)"}
     try:
         result = subprocess.run(
             ["uv", "run", "python", str(linter), str(path), "--format", "json"],

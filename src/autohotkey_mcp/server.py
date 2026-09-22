@@ -19,6 +19,7 @@ from fastmcp import FastMCP
 from autohotkey_mcp import help_content, prompt_catalog
 from autohotkey_mcp import personas as personas_mod
 from autohotkey_mcp.ahk_llm import chat_via_http, chat_via_http_stream, http_llm_available
+from autohotkey_mcp.depot import resolve_depot_path
 from autohotkey_mcp.prompt_refine import refine_generation_prompt
 from autohotkey_mcp.prompt_resources import register_prompt_resources
 from autohotkey_mcp.prompts import register_prompts
@@ -33,10 +34,10 @@ from autohotkey_mcp.tools.scriptlets import get_running_overview
 
 PORT = int(os.getenv("PORT", "10746"))
 HOST = os.getenv("HOST", "127.0.0.1")
-_DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
+_DEPOT = resolve_depot_path()
 _AI_GENERATED = _DEPOT / "scriptlets" / "ai_generated"
 
-# Runtime LLM overrides — set via PUT /api/llm/settings, not persisted across restarts
+# Runtime LLM overrides - set via PUT /api/llm/settings, not persisted across restarts
 _llm_runtime: dict[str, Any] = {}
 
 mcp = FastMCP("autohotkey-mcp")
@@ -91,7 +92,7 @@ async def api_help(level: str | None = None) -> JSONResponse:
 
 @app.post("/api/generate_scriptlet")
 async def api_generate_scriptlet(request: Request) -> JSONResponse:
-    """SPA: same as MCP generate_scriptlet — **no MCP Context** here, so **localhost HTTP only** (Ollama/LM Studio)."""
+    """SPA: same as MCP generate_scriptlet - **no MCP Context** here, so **localhost HTTP only** (Ollama/LM Studio)."""
     try:
         body = await request.json()
     except Exception:
@@ -217,7 +218,7 @@ async def api_chat(request: Request) -> JSONResponse | StreamingResponse:
 
 @app.post("/api/refine_prompt")
 async def api_refine_prompt(request: Request) -> JSONResponse:
-    """SPA: refine rough idea — HTTP-only path (ctx None). MCP tool uses sampling + HTTP."""
+    """SPA: refine rough idea - HTTP-only path (ctx None). MCP tool uses sampling + HTTP."""
     try:
         body = await request.json()
     except Exception:
@@ -445,14 +446,14 @@ async def api_llm_models() -> JSONResponse:
 
 
 async def api_running() -> JSONResponse:
-    """SPA: running scriptlets — PIDs (direct), bridge rows, hotkeys/description from depot headers."""
+    """SPA: running scriptlets - PIDs (direct), bridge rows, hotkeys/description from depot headers."""
     data = await get_running_overview()
     return JSONResponse(content=data)
 
 
 @app.post("/api/stop_scriptlet")
 async def api_stop_scriptlet(request: Request) -> JSONResponse:
-    """SPA: stop one instance — pass ``pid`` for direct multi-launch; omit for bridge or all direct PIDs for id."""
+    """SPA: stop one instance - pass ``pid`` for direct multi-launch; omit for bridge or all direct PIDs for id."""
     try:
         body = await request.json()
     except Exception:
@@ -611,12 +612,12 @@ def _mini_help_html() -> str:
     )
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>AutoHotkey MCP – Help</title>
+<title>AutoHotkey MCP - Help</title>
 <style>body{{font-family:system-ui,sans-serif;margin:1rem 2rem;max-width:900px;line-height:1.5;}}
 nav{{margin-bottom:1rem;padding:.5rem 0;border-bottom:1px solid #ccc;}} nav a{{margin-right:1rem;}}
 section{{margin-bottom:2rem;}} .c{{white-space:pre-wrap;}} pre{{background:#f5f5f5;padding:.75rem;overflow-x:auto;}}
 strong{{font-weight:600;}} a{{color:#06c;}}</style></head><body>
-<h1>AutoHotkey MCP – Help</h1>
+<h1>AutoHotkey MCP - Help</h1>
 <nav>{nav}</nav>
 {sections}
 <p><small>Mini-help (server-rendered). Full webapp: <a href="http://127.0.0.1:10747/">10747</a> · <a href="/">/</a> <a href="/status">/status</a></small></p>
