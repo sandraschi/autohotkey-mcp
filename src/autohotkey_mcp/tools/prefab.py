@@ -1,13 +1,13 @@
-"""Prefab UI tools for autohotkey-mcp — rich prefab-ui 0.19.1 surfaces.
+"""Prefab UI tools for autohotkey-mcp - rich prefab-ui 0.19.1 surfaces.
 
 Six @mcp.tool(app=True) tools:
 
-  show_scriptlets_card         — DataTable: all scriptlets, Dot status, Badge category
-  show_running_scriptlets_card — Dashboard metrics + DataTable of live instances
-  show_ahk_help_card           — Tabs per help level, Markdown rendering
-  show_scriptlet_detail_card   — Code block + Badge metadata + Kbd hotkey chips
-  show_generation_result_card  — generated script Code block + Badge row
-  show_server_status_card      — Dashboard KPIs + config DataTable
+  show_scriptlets_card         - DataTable: all scriptlets, Dot status, Badge category
+  show_running_scriptlets_card - Dashboard metrics + DataTable of live instances
+  show_ahk_help_card           - Tabs per help level, Markdown rendering
+  show_scriptlet_detail_card   - Code block + Badge metadata + Kbd hotkey chips
+  show_generation_result_card  - generated script Code block + Badge row
+  show_server_status_card      - Dashboard KPIs + config DataTable
 
 All components built with context manager pattern (the only safe approach with
 prefab-ui's ContextVar-based child tracking).
@@ -54,7 +54,7 @@ from prefab_ui.components import (
 
 logger = logging.getLogger(__name__)
 
-BRIDGE_URL = os.getenv("AUTOHOTKEY_BRIDGE_URL", "http://127.0.0.1:10744").rstrip("/")
+BRIDGE_URL = os.getenv("AUTOHOTKEY_BRIDGE_URL", "http://127.0.0.1:10764").rstrip("/")
 DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
 PORT = os.getenv("PORT", "10746")
 
@@ -96,7 +96,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
     """Register Prefab App tools. Skipped when AUTOHOTKEY_PREFAB_APPS=0."""
 
     if not _prefab_enabled():
-        logger.info("AUTOHOTKEY_PREFAB_APPS=0 — skipping Prefab tool registration")
+        logger.info("AUTOHOTKEY_PREFAB_APPS=0 - skipping Prefab tool registration")
         return
 
     from autohotkey_mcp import help_content
@@ -111,7 +111,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
     )
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 1. ALL SCRIPTLETS — DataTable
+    # 1. ALL SCRIPTLETS - DataTable
     # ──────────────────────────────────────────────────────────────────────────
 
     @mcp.tool(app=True)
@@ -137,7 +137,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         total = len(items)
         running_count = sum(1 for s in items if s.get("running"))
 
-        plain = f"AutoHotkey Scriptlets — {total} total, {running_count} running [{source}]\n"
+        plain = f"AutoHotkey Scriptlets - {total} total, {running_count} running [{source}]\n"
         for s in items:
             plain += (
                 f"{_plain_dot(bool(s.get('running')))}"
@@ -186,7 +186,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         )
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 2. RUNNING SCRIPTLETS — Dashboard KPIs + DataTable
+    # 2. RUNNING SCRIPTLETS - Dashboard KPIs + DataTable
     # ──────────────────────────────────────────────────────────────────────────
 
     @mcp.tool(app=True)
@@ -221,7 +221,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
             rows.append(
                 {
                     "script_id": inst.get("script_id") or "?",
-                    "pid": str(inst["pid"]) if inst.get("pid") else "—",
+                    "pid": str(inst["pid"]) if inst.get("pid") else "-",
                     "source": Badge(src, variant="info" if src == "bridge" else "default"),
                     "hotkeys": inst.get("hotkeys") or "",
                     "description": (inst.get("description") or "")[:80],
@@ -266,7 +266,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         )
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 3. HELP — Tabs + Markdown
+    # 3. HELP - Tabs + Markdown
     # ──────────────────────────────────────────────────────────────────────────
 
     @mcp.tool(app=True)
@@ -283,7 +283,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         with Card(css_class="w-full") as view:
             with CardHeader():
                 CardTitle("AutoHotkey v2 Help")
-                CardDescription("Six reference levels — click tabs to switch")
+                CardDescription("Six reference levels - click tabs to switch")
             with CardContent():
                 with Tabs(value=active, variant="line"):
                     for lv in levels:
@@ -296,7 +296,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         )
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 4. SINGLE SCRIPTLET DETAIL — Code + Badges + Kbd
+    # 4. SINGLE SCRIPTLET DETAIL - Code + Badges + Kbd
     # ──────────────────────────────────────────────────────────────────────────
 
     @mcp.tool(app=True)
@@ -374,7 +374,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         )
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 5. GENERATION RESULT — Code + Badges + warning
+    # 5. GENERATION RESULT - Code + Badges + warning
     # ──────────────────────────────────────────────────────────────────────────
 
     @mcp.tool(app=True)
@@ -454,7 +454,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         )
 
     # ──────────────────────────────────────────────────────────────────────────
-    # 6. SERVER STATUS — Dashboard KPIs + config DataTable
+    # 6. SERVER STATUS - Dashboard KPIs + config DataTable
     # ──────────────────────────────────────────────────────────────────────────
 
     @mcp.tool(app=True)
@@ -491,7 +491,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         config_rows = [
             {"setting": "MCP Port", "value": PORT},
             {"setting": "Bridge URL", "value": BRIDGE_URL},
-            {"setting": "Bridge Status", "value": "UP" if bridge_up else f"DOWN — {bridge_error}"},
+            {"setting": "Bridge Status", "value": "UP" if bridge_up else f"DOWN - {bridge_error}"},
             {"setting": "Script Depot", "value": str(DEPOT)},
             {"setting": "AHK Executable", "value": ahk_exe},
             {"setting": "LLM Base URL", "value": os.getenv("AUTOHOTKEY_LLM_BASE_URL", "not set")},
@@ -500,7 +500,7 @@ def register_prefab_tools(mcp: FastMCP) -> None:
         ]
 
         with Column(gap=3) as view:
-            # KPI row — 4 tiles across
+            # KPI row - 4 tiles across
             with Dashboard(columns=4, row_height=90):
                 with DashboardItem(col=1, row=1, col_span=1):
                     Metric(label="Scriptlets", value=total)

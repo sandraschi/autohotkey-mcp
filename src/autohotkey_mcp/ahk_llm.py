@@ -1,4 +1,4 @@
-"""Local LLM completion for AHK generation — OpenAI-compatible API, localhost-only (SSRF-safe)."""
+"""Local LLM completion for AHK generation - OpenAI-compatible API, localhost-only (SSRF-safe)."""
 
 from __future__ import annotations
 
@@ -46,10 +46,11 @@ Hard rules:
   - `; @version: 1.0.0`
   - `; @generated_by: autohotkey-mcp`
 - Use **v2 syntax only** (not v1). Prefer `MsgBox("text")`, `Hotkey("F1", myFunc)`, functions with `=>` where appropriate.
+- If the script registers a `Hotkey()` call and does not already show a `Gui` or run a `SetTimer`, you MUST add a line `Persistent()` immediately after `#SingleInstance Force`. Without it, the script's auto-execute thread ends and the whole process silently exits (confirmed in production: ~51 seconds after load) — the hotkey then does nothing, with no error anywhere.
 - Do **not** embed network calls to arbitrary URLs unless the user explicitly asked for HTTP; prefer local automation.
-- Do **not** use `Run` to launch `powershell`/`cmd` with user-controlled strings from the prompt in a dangerous way — keep scripts self-contained.
+- Do **not** use `Run` to launch `powershell`/`cmd` with user-controlled strings from the prompt in a dangerous way - keep scripts self-contained.
 - If the request is impossible or unsafe, output a minimal script that shows `MsgBox("Cannot safely fulfill: ...", "autohotkey-mcp")` and explains in the @description.
-- Output **nothing** outside the script: no markdown fences unless you need them — if you use ``` fences, put only AHK inside.
+- Output **nothing** outside the script: no markdown fences unless you need them - if you use ``` fences, put only AHK inside.
 
 After the header, implement what the user asked. Keep scripts short and readable."""
 
@@ -81,6 +82,38 @@ def validate_generated_ahk(code: str) -> tuple[bool, str]:
         if not re.search(r";\s*@description\s*:", code):
             return False, "Missing metadata: ; @description: …"
     return True, ""
+
+
+_PERSISTENCE_TRIGGERS = re.compile(r"Persistent\(|SetTimer\(|\.Show\(")
+_HOTKEY_CALL = re.compile(r"Hotkey\(")
+
+
+def needs_persistence_fix(code: str) -> bool:
+    """True if the script registers a dynamic Hotkey() call but has nothing else keeping AHK v2's
+    auto-execute thread resident (no Persistent()/SetTimer()/shown Gui). Confirmed in production:
+    such a script builds its GUI and registers its hotkey fine, then the whole process silently
+    exits ~51s later with no error - the hotkey then does nothing."""
+    return bool(_HOTKEY_CALL.search(code)) and not bool(_PERSISTENCE_TRIGGERS.search(code))
+
+
+def apply_persistence_fix(code: str) -> str:
+    """Insert `Persistent()` right after `#SingleInstance` (or `#Requires` if no SingleInstance
+    line exists) so the script survives past its auto-execute thread ending."""
+    lines = code.splitlines(keepends=True)
+    insert_at = None
+    for i, line in enumerate(lines):
+        if line.strip().startswith("#SingleInstance"):
+            insert_at = i + 1
+            break
+    if insert_at is None:
+        for i, line in enumerate(lines):
+            if line.strip().startswith("#Requires"):
+                insert_at = i + 1
+                break
+    if insert_at is None:
+        insert_at = 0
+    lines.insert(insert_at, "Persistent()\n")
+    return "".join(lines)
 
 
 def build_openai_chat_messages(

@@ -9,10 +9,12 @@ use pywinauto-mcp for UIA-based GUI automation (elements, OCR, screenshots).
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import re
 import signal
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -23,11 +25,12 @@ from fastmcp.server.dependencies import OptionalCurrentContext
 
 from autohotkey_mcp import help_content, prompt_catalog
 from autohotkey_mcp import personas as personas_mod
+from autohotkey_mcp.ahk_llm import apply_persistence_fix, needs_persistence_fix
 from autohotkey_mcp.cua_hud import CuaHUD
 from autohotkey_mcp.prompt_refine import refine_generation_prompt
 from autohotkey_mcp.scriptlet_generate import generate_ahk_script_to_file
 
-BRIDGE_URL = os.getenv("AUTOHOTKEY_BRIDGE_URL", "http://127.0.0.1:10744").rstrip("/")
+BRIDGE_URL = os.getenv("AUTOHOTKEY_BRIDGE_URL", "http://127.0.0.1:10764").rstrip("/")
 DEPOT = Path(os.getenv("AUTOHOTKEY_SCRIPT_DEPOT", "d:/dev/repos/autohotkey-test"))
 SCRIPTLETS_DIR = DEPOT / "scriptlets"
 AI_GENERATED_DIR = SCRIPTLETS_DIR / "ai_generated"
@@ -206,6 +209,71 @@ def _read_metadata(path: Path) -> dict[str, Any]:
     return out
 
 
+def _metadata_json_path() -> Path:
+    return SCRIPTLETS_DIR / "metadata.json"
+
+
+def _load_catalog() -> dict[str, Any]:
+    path = _metadata_json_path()
+    if not path.exists():
+        return {"plugins": {}, "categories": {}, "settings": {}}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _save_catalog(data: dict[str, Any]) -> None:
+    _metadata_json_path().write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def _used_hotkey_tokens(plugins: dict[str, Any]) -> dict[str, list[str]]:
+    """Map first-token of each registered hotkey combo -> plugin keys using it."""
+    used: dict[str, list[str]] = {}
+    for key, entry in plugins.items():
+        for hk in entry.get("hotkeys") or []:
+            token = str(hk).split()[0] if hk else ""
+            if token:
+                used.setdefault(token, []).append(key)
+    return used
+
+
+def _find_ahk_linter_cli() -> Path | None:
+    """Locate the sibling ahk-linter repo's CLI (D:\\Dev\\repos\\ahk-linter\\ahk_lint.py by default)."""
+    override = os.getenv("AHK_LINTER_PATH")
+    candidates: list[Path] = []
+    if override:
+        candidates.append(Path(override))
+    candidates.append(DEPOT.parent / "ahk-linter" / "ahk_lint.py")
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+def _run_ahk_lint(path: Path) -> dict[str, Any]:
+    """Lint one file via the sibling ahk-lint CLI. Returns ok=True (skipped) if the linter isn't found."""
+    linter = _find_ahk_linter_cli()
+    if not linter:
+        return {"ok": True, "skipped": True, "reason": "ahk-linter not found (set AHK_LINTER_PATH)"}
+    try:
+        result = subprocess.run(
+            ["uv", "run", "python", str(linter), str(path), "--format", "json"],
+            cwd=str(linter.parent),
+            capture_output=True,
+            text=True,
+            timeout=30,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        raw = (result.stdout or "").strip()
+        data = json.loads(raw) if raw else {}
+        issues: list[dict[str, Any]] = []
+        for entry in data.get("issues", []):
+            issues.extend(entry.get("issues", []))
+        errors = [i for i in issues if i.get("severity") == "error"]
+        warnings = [i for i in issues if i.get("severity") == "warning"]
+        return {"ok": len(errors) == 0, "errors": errors, "warnings": warnings}
+    except Exception as e:
+        return {"ok": True, "skipped": True, "reason": f"lint check failed to run: {e}"}
+
+
 def _enrich_scriptlet_row(script_id: str) -> dict[str, Any]:
     path = _depot_path(script_id)
     meta = _read_metadata(path) if path.exists() else {}
@@ -263,7 +331,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def list_scriptlets() -> dict[str, Any]:
         """
-        List all AutoHotkey scriptlets. Uses bridge (10744) when available; else scans depot directly.
+        List all AutoHotkey scriptlets. Uses bridge (10764) when available; else scans depot directly.
         Returns id, name, description, category, running.
         """
         try:
@@ -413,7 +481,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         Generate a new AutoHotkey v2 script from a natural-language prompt. Writes ONLY to scriptlets/ai_generated/.
 
         **Primary:** FastMCP **sampling** (`Context.sample`) when the MCP host supports it (e.g. Cursor).
-        **Fallback:** localhost OpenAI-compatible HTTP — `AUTOHOTKEY_LLM_BASE_URL`, `AUTOHOTKEY_LLM_MODEL` (Ollama/LM Studio).
+        **Fallback:** localhost OpenAI-compatible HTTP - `AUTOHOTKEY_LLM_BASE_URL`, `AUTOHOTKEY_LLM_MODEL` (Ollama/LM Studio).
         No file is written on failure.
 
         filename: optional base name without .ahk (sanitized). Review output before moving to the main depot.
@@ -451,7 +519,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         Turn a vague idea into a clear prompt for `generate_scriptlet`. Same LLM path as generation:
         **FastMCP sampling first**, localhost HTTP if sampling is unavailable.
 
-        persona_id: optional — one of the web personas (e.g. ahk_expert, teacher) to bias tone; omit for neutral.
+        persona_id: optional - one of the web personas (e.g. ahk_expert, teacher) to bias tone; omit for neutral.
         """
         extra = personas_mod.persona_system(persona_id)
         return await refine_generation_prompt(rough, ctx, persona_system_extra=extra)
@@ -488,4 +556,109 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             "mini_help_url": mini_help_url,
             "full_webapp_url": full_webapp_url,
             "message": f"Open {mini_help_url} for mini-help. Full webapp (Overview, Help, Chat, Scriptlets, Running, Status): {full_webapp_url} (run web_sota/start.ps1).",
+        }
+
+    @mcp.tool()
+    async def promote_scriptlet(
+        script_id: str,
+        category: str = "utilities",
+        hotkeys: list[str] | None = None,
+        tags: list[str] | None = None,
+        priority: int = 20,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Promote a scriptlet from scriptlets/ai_generated/ into the live depot and register it in
+        metadata.json. Appears in the dashboard immediately - the bridge live-scans scriptlets/, no
+        restart needed.
+
+        Three safety checks run first, in order:
+        1. **Persistence check** (auto-fixed, not blocking): if the script only registers a dynamic
+           Hotkey() with nothing else keeping AHK v2's auto-execute thread resident, inserts
+           `Persistent()` automatically. Without this, the script silently exits ~51s after load
+           and the hotkey does nothing - confirmed in production on 2026-09-22.
+        2. **Hotkey collision** (blocking unless force=True): checks every hotkey the script declares
+           against every hotkey already registered in metadata.json.
+        3. **Lint** (blocking unless force=True): runs the sibling ahk-lint CLI; real errors block
+           promotion. Skipped silently if ahk-lint isn't found (set AHK_LINTER_PATH to point at it).
+
+        script_id: filename stem in ai_generated/ (no .ahk extension).
+        hotkeys: metadata.json hotkeys list; defaults to the file's own @hotkeys header if present.
+        force: promote despite a collision or lint error (not recommended - fix the conflict instead).
+        """
+        src_path = AI_GENERATED_DIR / f"{script_id}.ahk"
+        if not src_path.exists():
+            return {
+                "success": False,
+                "error": f"Not found in ai_generated/: {src_path}",
+                "script_id": script_id,
+            }
+
+        source = src_path.read_text(encoding="utf-8", errors="replace")
+        meta = _read_metadata(src_path)
+
+        persistence_fixed = False
+        if needs_persistence_fix(source):
+            source = apply_persistence_fix(source)
+            persistence_fixed = True
+
+        declared_hotkeys = hotkeys or ([meta["hotkeys"]] if meta.get("hotkeys") else [])
+        catalog = _load_catalog()
+        plugins = catalog.setdefault("plugins", {})
+        used = _used_hotkey_tokens(plugins)
+        collisions: dict[str, list[str]] = {}
+        for hk in declared_hotkeys:
+            token = str(hk).split()[0] if hk else ""
+            if token and token in used:
+                collisions[token] = used[token]
+        if collisions and not force:
+            return {
+                "success": False,
+                "error": "Hotkey collision - choose different hotkeys, or pass force=True to override.",
+                "script_id": script_id,
+                "collisions": collisions,
+            }
+
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".ahk", delete=False, encoding="utf-8"
+        ) as tf:
+            tf.write(source)
+            tmp_path = Path(tf.name)
+        try:
+            lint = _run_ahk_lint(tmp_path)
+        finally:
+            tmp_path.unlink(missing_ok=True)
+        if not lint.get("ok") and not force:
+            return {
+                "success": False,
+                "error": "Lint errors - fix and retry, or pass force=True to override (not recommended).",
+                "script_id": script_id,
+                "lint": lint,
+            }
+
+        dest_path = SCRIPTLETS_DIR / f"{script_id}.ahk"
+        dest_path.write_text(source, encoding="utf-8")
+        src_path.unlink()
+
+        plugins[script_id] = {
+            "name": meta.get("name") or script_id.strip("_").replace("_", " ").title(),
+            "version": meta.get("version") or "1.0.0",
+            "description": meta.get("description") or "",
+            "category": category,
+            "author": meta.get("author") or "Sandra",
+            "dependencies": [],
+            "hotkeys": declared_hotkeys,
+            "enabled": True,
+            "priority": priority,
+            "tags": tags or [],
+        }
+        _save_catalog(catalog)
+
+        return {
+            "success": True,
+            "script_id": script_id,
+            "path": str(dest_path),
+            "persistence_auto_fixed": persistence_fixed,
+            "lint": lint,
+            "message": f"Promoted {script_id} - now live in the dashboard, no restart needed.",
         }

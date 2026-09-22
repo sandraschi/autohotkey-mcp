@@ -31,7 +31,7 @@ compared to legacy v1.
 - Refine vague ideas into precise AHK prompts
 - Six rich Prefab UI cards when called from Claude Desktop / Cursor
 
-**Ports:** Backend `10746` · Webapp `10747` · ScriptletCOMBridge `10744`
+**Ports:** Backend `10746` · Webapp `10747` · ScriptletCOMBridge `10764`
 
 ## Three Things to Know About v2
 
@@ -49,6 +49,7 @@ compared to legacy v1.
 ; @hotkeys: Ctrl+Alt+H
 #Requires AutoHotkey v2.0+
 #SingleInstance Force
+Persistent()
 
 OnError(LogErrors)
 
@@ -629,6 +630,7 @@ reads these fields for the list, detail, and generate tools.
 ; @hotkeys: Ctrl+Alt+X
 #Requires AutoHotkey v2.0+
 #SingleInstance Force
+Persistent()
 
 ; Error handler — always include
 OnError(LogErrors)
@@ -673,6 +675,7 @@ For scripts that show a window:
 ; @hotkeys: Ctrl+Alt+T
 #Requires AutoHotkey v2.0+
 #SingleInstance Force
+Persistent()
 
 OnError(LogErrors)
 
@@ -731,6 +734,7 @@ For scripts with no GUI — keep them lean:
 ; @hotkeys: Win+Left (supplements built-in with monitor awareness)
 #Requires AutoHotkey v2.0+
 #SingleInstance Force
+Persistent()
 
 OnError(LogErrors)
 
@@ -777,6 +781,7 @@ The depot's `ai_generated/README.md` summarises the review process.
 
 | Mistake | Correct |
 |---------|---------|
+| Only `Hotkey()` calls, no persistence trigger — script silently exits after its auto-execute thread idles (confirmed: ~51s), hotkey stops working with zero error | Add `Persistent()` right after `#SingleInstance Force` in every script that registers a dynamic `Hotkey()` and doesn't already show a `Gui` or run a `SetTimer` |
 | `^!c::` label syntax | `Hotkey("^!c", MyFn)` |
 | `MsgBox timeout T10` | `TrayTip(...)` or `SetTimer((*) => ToolTip(), -3000)` |
 | `gui.Add` without gui object | `myGui := Gui(); myGui.Add(...)` |
@@ -808,7 +813,7 @@ TOOLS = """\
 
 Returns all scriptlets in the depot with metadata.
 
-**Source priority:** ScriptletCOMBridge (port 10744) → depot scan fallback
+**Source priority:** ScriptletCOMBridge (port 10764) → depot scan fallback
 **Returns:** Array of `{id, name, description, category, running, path}`
 
 ```json
@@ -827,7 +832,7 @@ Returns all scriptlets in the depot with metadata.
 
 Run a scriptlet by its id (filename stem without `.ahk`).
 
-**Bridge mode:** `GET /run/{script_id}.ahk` on 10744
+**Bridge mode:** `GET /run/{script_id}.ahk` on 10764
 **Direct mode:** Spawns `AutoHotkey64.exe scriptlets/{id}.ahk`, tracks PID
 
 ```
@@ -1030,7 +1035,7 @@ autohotkey-mcp  (FastMCP 3.2.4)
         ├── Prefab Tools (invoke all 6 tools)
         └── Status (server health)
 
-ScriptletCOMBridge.ahk  :10744  (autohotkey-test)
+ScriptletCOMBridge.ahk  :10764  (autohotkey-test)
     ├── GET /scriptlets → JSON array
     ├── GET /run/:name  → spawn .ahk
     ├── GET /stop/:name → kill .ahk
@@ -1084,7 +1089,7 @@ runs stdio-only** — no HTTP, no port 10746 bind. Set
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTOHOTKEY_SCRIPT_DEPOT` | `d:/dev/repos/autohotkey-test` | Root of the AHK depot (must contain `scriptlets/`) |
-| `AUTOHOTKEY_BRIDGE_URL` | `http://127.0.0.1:10744` | ScriptletCOMBridge base URL |
+| `AUTOHOTKEY_BRIDGE_URL` | `http://127.0.0.1:10764` | ScriptletCOMBridge base URL |
 | `AUTOHOTKEY_EXE` | (auto-detect) | Path to `AutoHotkey64.exe` for direct runs |
 | `AUTOHOTKEY_MCP_HTTP` | (auto) | `1` = force HTTP on PORT; `0` = force stdio-only |
 | `PORT` | `10746` | Backend HTTP port |
@@ -1143,12 +1148,12 @@ curl http://127.0.0.1:10746/status
 Start-Process http://127.0.0.1:10746/help
 
 # Check bridge
-curl http://127.0.0.1:10744/status
+curl http://127.0.0.1:10764/status
 ```
 
 ## Fleet Registration
 
-- **WEBAPP_PORTS.md:** 10744 (bridge), 10746 (backend), 10747 (frontend)
+- **WEBAPP_PORTS.md:** 10764 (bridge), 10746 (backend), 10747 (frontend)
 - **FLEET_INDEX.md:** `autohotkey-mcp` — AHK Scriptlet Hub v0.2.0
 - **starts/:** `autohotkey-mcp-start.bat`, `autohotkey-test-start.bat`
 - **glama.json:** marketplace metadata at repo root
@@ -1160,7 +1165,7 @@ The scriptlet depot is a separate repo at `D:\\Dev\\repos\\autohotkey-test`.
 
 ```
 autohotkey-test/
-├── ScriptletCOMBridge.ahk   HTTP bridge on :10744
+├── ScriptletCOMBridge.ahk   HTTP bridge on :10764
 ├── start.bat / start.ps1    fleet-standard launcher
 ├── scriptlets/              75+ .ahk files
 │   ├── ai_generated/        MCP-generated scripts (sandbox)

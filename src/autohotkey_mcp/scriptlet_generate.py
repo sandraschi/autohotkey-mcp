@@ -11,7 +11,9 @@ from fastmcp.server.context import Context
 
 from autohotkey_mcp.ahk_llm import (
     AHK_GENERATOR_SYSTEM,
+    apply_persistence_fix,
     extract_ahk_source,
+    needs_persistence_fix,
     validate_generated_ahk,
 )
 from autohotkey_mcp.dual_llm import complete_dual_path
@@ -97,11 +99,17 @@ async def generate_ahk_script_to_file(
             "hint": "Try a clearer prompt or a stronger model; no file was written.",
         }
 
+    persistence_fixed = False
+    if needs_persistence_fix(code):
+        code = apply_persistence_fix(code)
+        persistence_fixed = True
+
     path.write_text(code, encoding="utf-8")
     return {
         "success": True,
         "path": str(path),
         "script_id": stem,
         "generation_source": gen_src or "unknown",
+        "persistence_auto_fixed": persistence_fixed,
         "warning": "Review before moving to main scriptlets/. Untrusted scripts can harm your machine.",
     }
