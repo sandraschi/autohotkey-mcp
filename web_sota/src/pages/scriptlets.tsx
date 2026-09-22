@@ -60,7 +60,7 @@ export function Scriptlets() {
         setScriptlets(list);
         if (list.length === 0) {
           setError(
-            "No scriptlets in depot. Start ScriptletCOMBridge (10744) or check AUTOHOTKEY_SCRIPT_DEPOT."
+            "No scriptlets in depot. Start ScriptletCOMBridge (10764) or check AUTOHOTKEY_SCRIPT_DEPOT."
           );
         }
       })
