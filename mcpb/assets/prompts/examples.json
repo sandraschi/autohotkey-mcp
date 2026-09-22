@@ -47,7 +47,7 @@
     },
     "output_example": {
       "success": false,
-      "error": "Script not found: d:/dev/repos/autohotkey-test/scriptlets/nonexistent_script.ahk"
+      "error": "Script not found: d:/dev/repos/autohotkey-tools/scriptlets/nonexistent_script.ahk"
     }
   },
   {
@@ -125,7 +125,7 @@
     "output_example": {
       "found": true,
       "script_id": "quick_notes",
-      "path": "d:/dev/repos/autohotkey-test/scriptlets/quick_notes.ahk",
+      "path": "d:/dev/repos/autohotkey-tools/scriptlets/quick_notes.ahk",
       "source": "; @name Quick Notes\n; @description Open a quick notepad\n; @hotkeys Win+N\n#Requires AutoHotkey v2.0\n#SingleInstance Force\n\n#n::{\n    MsgBox \"Quick Notes activated\"\n}"
     }
   },
@@ -137,7 +137,7 @@
     "output_example": {
       "found": false,
       "script_id": "nonexistent",
-      "path": "d:/dev/repos/autohotkey-test/scriptlets/nonexistent.ahk"
+      "path": "d:/dev/repos/autohotkey-tools/scriptlets/nonexistent.ahk"
     }
   },
   {
@@ -177,7 +177,7 @@
     "output_example": {
       "success": true,
       "script_id": "hello_world",
-      "path": "d:/dev/repos/autohotkey-test/scriptlets/ai_generated/hello_world.ahk",
+      "path": "d:/dev/repos/autohotkey-tools/scriptlets/ai_generated/hello_world.ahk",
       "provider": "sampling"
     }
   },
@@ -744,7 +744,7 @@
     },
     "output_example": {
       "found": true,
-      "path": "d:/dev/repos/autohotkey-test/scriptlets/ai_generated/ai_generated_example.ahk",
+      "path": "d:/dev/repos/autohotkey-tools/scriptlets/ai_generated/ai_generated_example.ahk",
       "source": "; @name AI Generated Example\n; @category ai_generated\n#Requires AutoHotkey v2.0\nMsgBox \"Hello from AI!\""
     }
   },

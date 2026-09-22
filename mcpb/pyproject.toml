@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "autohotkey-mcp"
 version = "0.2.0"
-description = "MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata, AI generation (sampling), prefab UI cards, MCP prompts. Uses ScriptletCOMBridge and autohotkey-test repo as depot."
+description = "MCP server for AutoHotkey v2 scriptlets: list, run, stop, source/metadata, AI generation (sampling), prefab UI cards, MCP prompts. Uses ScriptletCOMBridge and autohotkey-tools repo as depot."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

@@ -1,6 +1,6 @@
 # autohotkey-mcp — Full Reference
 
-> FastMCP 3.2.4 | Python 3.12+ | Ports 10746/10747 | AHK depot: autohotkey-test
+> FastMCP 3.2.4 | Python 3.12+ | Ports 10746/10747 | AHK depot: autohotkey-tools
 
 ## What it does
 
@@ -36,7 +36,7 @@ autohotkey-mcp (FastMCP 3.2)
         ├── Prefab Tools (invoke all 6 prefab tools)
         └── Status
 
-ScriptletCOMBridge.ahk (10764)  ← autohotkey-test depot
+ScriptletCOMBridge.ahk (10764)  ← autohotkey-tools depot
     ├── GET /scriptlets  → JSON array
     ├── GET /run/:name   → start .ahk
     ├── GET /stop/:name  → stop .ahk
@@ -96,7 +96,7 @@ ScriptletCOMBridge.ahk (10764)  ← autohotkey-test depot
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| AUTOHOTKEY_SCRIPT_DEPOT | d:/dev/repos/autohotkey-test | Depot root (must contain scriptlets/) |
+| AUTOHOTKEY_SCRIPT_DEPOT | auto-detected sibling ../autohotkey-tools | Depot root (must contain scriptlets/) |
 | AUTOHOTKEY_BRIDGE_URL | http://127.0.0.1:10764 | ScriptletCOMBridge base URL |
 | AUTOHOTKEY_EXE | (auto-detect) | AHK v2 exe path |
 | AUTOHOTKEY_MCP_HTTP | (auto) | 0 = force stdio-only |
@@ -145,5 +145,5 @@ GET http://127.0.0.1:10746/health
 
 ## Related
 
-- **autohotkey-test** — AHK scriptlet depot; ScriptletCOMBridge on 10764
+- **autohotkey-tools** — AHK scriptlet depot; ScriptletCOMBridge on 10764
 - **pywinauto-mcp** — native Windows UI automation via UIA tree; complements AHK
