@@ -59,9 +59,9 @@ async def health() -> dict[str, Any]:
 
 @app.get("/api/scriptlets")
 async def api_scriptlets() -> JSONResponse:
-    """SPA: list scriptlets (same as list_scriptlets tool)."""
+    """SPA: list scriptlets (same as scriptlet_ops(operation="list"))."""
     try:
-        result = await mcp.call_tool("list_scriptlets", {})
+        result = await mcp.call_tool("scriptlet_ops", {"operation": "list"})
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e), "scriptlets": []})
     if hasattr(result, "structured_content") and result.structured_content is not None:
@@ -479,7 +479,7 @@ async def api_stop_scriptlet(request: Request) -> JSONResponse:
                 status_code=400, content={"success": False, "error": "pid must be an integer"}
             )
     try:
-        result = await mcp.call_tool("stop_scriptlet", args)
+        result = await mcp.call_tool("scriptlet_ops", {"operation": "stop", **args})
     except Exception as e:
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
     if hasattr(result, "structured_content") and result.structured_content is not None:
@@ -535,7 +535,9 @@ async def api_run_scriptlet(request: Request) -> JSONResponse:
             status_code=400, content={"success": False, "error": "Missing script_id"}
         )
     try:
-        result = await mcp.call_tool("run_scriptlet", {"script_id": script_id.strip()})
+        result = await mcp.call_tool(
+            "scriptlet_ops", {"operation": "run", "script_id": script_id.strip()}
+        )
     except Exception as e:
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
     if hasattr(result, "structured_content") and result.structured_content is not None:
@@ -559,7 +561,7 @@ async def api_run_scriptlet(request: Request) -> JSONResponse:
 async def status() -> dict[str, Any]:
     """Hub and proxy: GET /status."""
     try:
-        result = await mcp.call_tool("list_scriptlets", {})
+        result = await mcp.call_tool("scriptlet_ops", {"operation": "list"})
     except Exception:
         return {"ok": True, "service": "autohotkey-mcp", "port": PORT}
     if hasattr(result, "structured_content") and result.structured_content is not None:
