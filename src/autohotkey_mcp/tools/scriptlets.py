@@ -410,7 +410,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
         if matches:
             killed: list[int] = []
             for t in matches:
-                if _kill_pid(int(t["pid"])):
+                if await asyncio.to_thread(_kill_pid, int(t["pid"])):
                     killed.append(int(t["pid"]))
             dead = set(killed)
             _running_instances = [i for i in _running_instances if int(i["pid"]) not in dead]
@@ -614,7 +614,7 @@ def register_scriptlet_tools(mcp: FastMCP) -> None:
             tf.write(source)
             tmp_path = Path(tf.name)
         try:
-            lint = _run_ahk_lint(tmp_path)
+            lint = await asyncio.to_thread(_run_ahk_lint, tmp_path)
         finally:
             tmp_path.unlink(missing_ok=True)
         if not lint.get("ok") and not force:
