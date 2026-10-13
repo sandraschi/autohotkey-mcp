@@ -1,15 +1,16 @@
-﻿# Per-repo fleet start config for autohotkey-mcp
+# Per-repo fleet start config for autohotkey-mcp
 # Edit ports/backend target here - start.ps1 is fleet-standard.
 @{
     Name         = 'autohotkey-mcp'
     BackendPort  = 10746
     FrontendPort = 10747
     HealthPath   = '/health'
-    WebRoot      = 'D:\Dev\repos\autohotkey-mcp\web_sota'
+    WebRoot      = 'web_sota'
     Backend = @{
         Kind          = 'uvicorn'
         UvicornTarget = 'autohotkey_mcp.server:app'
         SyncExtras    = @('dev')
+        SyncOnStart  = $true
         Env           = @{ WEB_PORT = '10746' }
     }
     Frontend = @{
