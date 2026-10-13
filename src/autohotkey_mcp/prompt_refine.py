@@ -12,7 +12,7 @@ REFINE_SYSTEM = """You refine rough user ideas into **one** clear prompt for an 
 
 Rules:
 - Output **only** the refined prompt text (no preamble, no markdown fences).
-- English is fine unless the user wrote in another language — match the user's language.
+- English is fine unless the user wrote in another language - match the user's language.
 - Include: trigger (hotkey or auto-run), main behavior, important edge cases, and constraints (e.g. no admin).
 - Do **not** output AHK source code.
 - If the idea is unsafe (keylogging, stealing passwords, hiding malware), refuse briefly and suggest a safe alternative instead of a harmful prompt.

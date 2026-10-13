@@ -40,7 +40,7 @@ PROMPTS: list[dict[str, Any]] = [
         "tags": ["window"],
         "prompt": (
             "Hotkeys: Win+Alt+WheelUp / Win+Alt+WheelDown increase/decrease transparency of the active window "
-            "(clamp 50–255). Show tooltip with current value."
+            "(clamp 50-255). Show tooltip with current value."
         ),
     },
     {
@@ -180,7 +180,7 @@ PROMPTS: list[dict[str, Any]] = [
         "category": "strings",
         "tags": ["regex"],
         "prompt": (
-            "Small Gui: pattern, replacement, button Apply — runs RegExReplace on clipboard and show preview."
+            "Small Gui: pattern, replacement, button Apply - runs RegExReplace on clipboard and show preview."
         ),
     },
     {
